@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
 interface ReplyFormProps {
-  postId: number;
+  postId: string;
+  parentId?: string | null;
 }
 
-const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
+const ReplyForm: React.FC<ReplyFormProps> = ({ postId, parentId = null }) => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +17,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
       post_id: postId,
       content,
       author: "Anonymous",
+      parent_id: parentId,
     });
     setLoading(false);
     if (error) {
@@ -30,7 +32,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
       <input
         className="w-full border rounded p-1 text-sm"
         type="text"
-        placeholder="Write a reply..."
+        placeholder={parentId ? "Write a nested reply..." : "Write a reply..."}
         value={content}
         onChange={e => setContent(e.target.value)}
         required

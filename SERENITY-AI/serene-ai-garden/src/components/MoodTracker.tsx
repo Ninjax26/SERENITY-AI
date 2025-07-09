@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar, TrendingUp, Smile, Frown, Meh, Heart, Zap } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import { useToast } from "@/hooks/use-toast";
 
 interface MoodEntry {
   id: string;
@@ -19,24 +21,53 @@ const MoodTracker = () => {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [moodNote, setMoodNote] = useState('');
   const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
-  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([
-    {
-      id: '1',
-      mood: 4,
-      emoji: '😊',
-      note: 'Had a great morning walk and productive work session',
-      date: new Date(Date.now() - 86400000),
-      factors: ['Exercise', 'Work']
-    },
-    {
-      id: '2',
-      mood: 3,
-      emoji: '😐',
-      note: 'Average day, feeling neutral',
-      date: new Date(Date.now() - 172800000),
-      factors: ['Sleep']
+  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch user and mood entries from Supabase
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoading(false);
+      if (data.user) {
+        fetchMoodEntries(data.user.id);
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchMoodEntries(session.user.id);
+      } else {
+        setMoodEntries([]);
+      }
+    });
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchMoodEntries = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('mood_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      setMoodEntries(data.map((row: any) => ({
+        id: row.id,
+        mood: row.mood,
+        emoji: row.emoji,
+        note: row.note,
+        date: new Date(row.created_at),
+        factors: row.factors || [],
+      })));
+    } else {
+      setMoodEntries([]);
     }
-  ]);
+  };
 
   const moodOptions = [
     { value: 1, emoji: '😢', label: 'Very Sad', color: 'text-red-500' },
@@ -50,23 +81,35 @@ const MoodTracker = () => {
     'Sleep', 'Exercise', 'Work', 'Social', 'Weather', 'Health', 'Family', 'Stress'
   ];
 
-  const handleMoodSubmit = () => {
-    if (selectedMood === null) return;
-
+  const handleMoodSubmit = async () => {
+    if (selectedMood === null || !user) return;
+    setSubmitting(true);
     const selectedMoodOption = moodOptions.find(m => m.value === selectedMood);
-    const newEntry: MoodEntry = {
-      id: Date.now().toString(),
+    const newEntry = {
+      user_id: user.id,
       mood: selectedMood,
       emoji: selectedMoodOption!.emoji,
       note: moodNote,
-      date: new Date(),
-      factors: selectedFactors
+      factors: selectedFactors,
+      created_at: new Date().toISOString(),
     };
-
-    setMoodEntries([newEntry, ...moodEntries]);
+    const { error } = await supabase.from('mood_entries').insert(newEntry);
+    setSubmitting(false);
+    if (!error) {
+      fetchMoodEntries(user.id);
+      toast({ title: "Mood entry saved!", description: "Your mood has been logged." });
+    } else {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
     setSelectedMood(null);
     setMoodNote('');
     setSelectedFactors([]);
+  };
+
+  const handleClearAll = async () => {
+    if (!user) return;
+    await supabase.from('mood_entries').delete().eq('user_id', user.id);
+    setMoodEntries([]);
   };
 
   const averageMood = moodEntries.length > 0 
@@ -165,10 +208,17 @@ const MoodTracker = () => {
 
                 <Button
                   onClick={handleMoodSubmit}
-                  disabled={selectedMood === null}
+                  disabled={selectedMood === null || loading || submitting}
                   className="w-full bg-gradient-to-r from-wellness-500 to-serenity-500 hover:from-wellness-600 hover:to-serenity-600 text-white"
                 >
-                  Log Mood Entry
+                  {submitting ? "Saving..." : "Log Mood Entry"}
+                </Button>
+                <Button
+                  onClick={handleClearAll}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white mt-2"
+                  disabled={loading || !user}
+                >
+                  Clear All Mood Entries
                 </Button>
               </CardContent>
             </Card>

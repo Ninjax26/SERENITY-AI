@@ -55,6 +55,7 @@ const CommunityForum: React.FC = () => {
   const [userVoted, setUserVoted] = useState<Record<string, boolean>>({});
   const [userLiked, setUserLiked] = useState<Record<string, boolean>>({});
   const [user, setUser] = useState<User | null>(null);
+  const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
 
   // Fetch current user
   useEffect(() => {
@@ -235,6 +236,7 @@ const CommunityForum: React.FC = () => {
                     </Badge>
                   </div>
                 ))}
+                <div className="text-xs text-gray-400 mt-2">Categories will be updated in the future.</div>
               </CardContent>
             </Card>
 
@@ -381,12 +383,22 @@ const CommunityForum: React.FC = () => {
                                 {postVotes[post.id] || 0}
                               </Button>
                               {/* Removed Like Button */}
-                              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-600 hover:text-blue-600"
+                                onClick={() => setOpenReplies(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                              >
                                 <MessageCircle className="w-4 h-4 mr-1" />
-                                0
+                                Comments
                               </Button>
                             </div>
                           </div>
+                          {openReplies[post.id] && (
+                            <div className="mt-4">
+                              <ReplyList postId={post.id} />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

@@ -12,6 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CommunityForum from "../pages/Community";
+import DailyQuote from './DailyQuote';
 
 interface JournalEntry {
   id: string;
@@ -236,6 +237,7 @@ const JournalInterface = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-calm-50 via-white to-wellness-50 p-4">
       <div className="max-w-6xl mx-auto">
+        <DailyQuote />
         <Tabs defaultValue="journal" className="w-full">
           <TabsList className="mb-6 w-full grid grid-cols-2">
             <TabsTrigger value="journal">Journal</TabsTrigger>

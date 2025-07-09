@@ -427,3 +427,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Built with ❤️ for mental health and wellness**
 
 *SERENITY-AI is committed to making mental health support accessible, private, and effective for everyone.*
+![image](https://github.com/user-attachments/assets/8899204e-9dca-44bc-8b79-c86cbde7d2f2)
+![image](https://github.com/user-attachments/assets/02e79d7d-9edc-4faf-8489-c4a103cbec66)
+![image](https://github.com/user-attachments/assets/69350669-bbed-4b41-b1b8-6ff709e9a4b7)
+![image](https://github.com/user-attachments/assets/c99d71dd-2f01-4726-aaec-e102b95c3032)
+![image](https://github.com/user-attachments/assets/8bcddbda-a449-4e87-b235-f6fc5da47344)
+
+
+
+

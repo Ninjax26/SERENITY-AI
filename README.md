@@ -400,8 +400,8 @@ npm run build
 - **Documentation**: Comprehensive guides and tutorials
 
 ### Professional Support
-- **Email**: support@serenity-ai.com
-- **Crisis Line**: 1-800-SERENITY (24/7 support)
+- **Email**: dhruvpatel8903@gmail.com 
+- **Crisis Line**: 1800-599-0019 (24/7 support)
 - **Professional Services**: Licensed therapist consultations
 
 ## 📄 License

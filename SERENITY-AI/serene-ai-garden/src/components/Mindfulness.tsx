@@ -1380,11 +1380,11 @@ const MindfulnessInterface = () => {
 
           {/* Focus Sounds */}
           <TabsContent value="focus">
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {focusMusic.map((track, index) => (
                 <div
                   key={index}
-                  className="flex items-center bg-white rounded-2xl shadow-sm px-6 py-4 space-x-4 border border-gray-100"
+                  className="flex items-center bg-card dark:bg-gray-900 rounded-2xl shadow-sm px-6 py-4 space-x-4 border border-gray-100 dark:border-gray-700"
                 >
                   {/* Icon */}
                   <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-gradient-to-br from-serenity-400 to-calm-400">
@@ -1392,19 +1392,19 @@ const MindfulnessInterface = () => {
                   </div>
                   {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-lg text-gray-900 truncate">{track.name}</div>
-                    <div className="text-sm text-gray-500 capitalize truncate">{track.type} • {track.duration}</div>
+                    <div className="font-semibold text-lg text-foreground truncate">{track.name}</div>
+                    <div className="text-sm text-muted-foreground capitalize truncate">{track.type} • {track.duration}</div>
                   </div>
                   {/* Play/Pause Button */}
                   <button
                     onClick={() => handlePlayPause(index)}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 hover:border-serenity-400 transition-colors bg-white focus:outline-none`}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 hover:border-serenity-400 transition-colors bg-white dark:bg-gray-800 focus:outline-none`}
                   >
                     {playingIndex === index ? <Pause className="w-5 h-5 text-serenity-500" /> : <Play className="w-5 h-5 text-serenity-500" />}
                   </button>
                   <audio
+                    src={import.meta.env.BASE_URL + "Sounds/" + track.file}
                     ref={el => (audioRefs.current[index] = el)}
-                    src={`/Sounds/${track.file}`}
                     onEnded={() => setPlayingIndex(null)}
                   />
                 </div>

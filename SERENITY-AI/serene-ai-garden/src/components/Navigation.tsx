@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Sparkles, Brain } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Sparkles, Brain, Moon, Sun } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
+import { useTheme } from "@/hooks/use-theme";
 
 interface NavigationProps {
   currentView: string;
@@ -11,6 +12,7 @@ interface NavigationProps {
 const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<{ user_metadata?: { avatar_url?: string }; email?: string } | null>(null);
+  const [theme, setTheme] = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
@@ -40,7 +42,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   ];
 
   return (
-    <nav className="bg-white/90 backdrop-blur-md border-b border-white/50 sticky top-0 z-50">
+    <nav className="bg-white/90 dark:bg-gray-900 backdrop-blur-md border-b border-white/50 dark:border-gray-800 sticky top-0 z-50">
       <div>
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -63,7 +65,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                   className={`flex items-center space-x-2 transition-all duration-200 ${
                     currentView === item.id 
                       ? 'bg-serenity-500 text-white shadow-lg' 
-                      : 'hover:bg-serenity-50 text-serenity-700'
+                      : 'hover:bg-serenity-50 text-serenity-700 dark:hover:bg-serenity-900 dark:text-serenity-100'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -71,6 +73,17 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                 </Button>
               );
             })}
+          </div>
+
+          {/* Dark Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Toggle dark mode"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-full hover:bg-serenity-100 dark:hover:bg-serenity-800 transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700 dark:text-gray-200" />}
+            </button>
           </div>
 
           {/* Auth Buttons */}

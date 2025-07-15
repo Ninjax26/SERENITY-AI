@@ -81,18 +81,18 @@ const PostForm: React.FC = () => {
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 bg-card dark:bg-gray-900">
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Input
               {...register("title")}
               placeholder="Post title"
-              className="w-full"
+              className="w-full bg-background dark:bg-gray-900 text-foreground dark:text-gray-100"
               disabled={isLoading}
             />
             {errors.title && (
-              <p className="text-sm text-red-500 mt-1">{errors.title.message}</p>
+              <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.title.message}</p>
             )}
           </div>
 
@@ -100,17 +100,17 @@ const PostForm: React.FC = () => {
             <Textarea
               {...register("content")}
               placeholder="Share your thoughts..."
-              className="w-full"
+              className="w-full bg-background dark:bg-gray-900 text-foreground dark:text-gray-100"
               rows={4}
               disabled={isLoading}
             />
             {errors.content && (
-              <p className="text-sm text-red-500 mt-1">{errors.content.message}</p>
+              <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.content.message}</p>
             )}
           </div>
 
           {error && (
-            <p className="text-sm text-red-500 mt-2">{error}</p>
+            <p className="text-sm text-red-500 dark:text-red-400 mt-2">{error}</p>
           )}
 
           <Button

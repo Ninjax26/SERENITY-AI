@@ -29,10 +29,10 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-serenity-600 via-calm-600 to-wellness-600 bg-clip-text text-transparent animate-fade-in">
           Find Your Inner
           <br />
-          <span className="relative">
-            Serenity
-            <div className="absolute -inset-1 bg-gradient-to-r from-serenity-500/20 to-calm-500/20 blur-xl rounded-lg"></div>
-          </span>
+         <span className="relative inline-block bg-gradient-to-r from-serenity-500 via-calm-500 to-wellness-500 bg-clip-text text-transparent">
+           Serenity
+           <div className="absolute -inset-1 bg-gradient-to-r from-serenity-500/20 to-calm-500/20 blur-xl rounded-lg z-[-1]"></div>
+         </span>
         </h1>
 
         {/* Subtitle */}

@@ -286,7 +286,7 @@ const ChatInterface = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-serenity-50 via-white to-calm-50 p-4">
+    <div className="min-h-screen bg-background text-foreground p-4">
       <div className="max-w-4xl mx-auto">
         {/* Export Buttons */}
         <div className="flex justify-end gap-2 mb-2">
@@ -303,7 +303,7 @@ const ChatInterface = () => {
               AI Companion
             </h1>
           </div>
-          <p className="text-gray-600">Your safe space for emotional support and meaningful conversations</p>
+          <p className="text-muted-foreground">Your safe space for emotional support and meaningful conversations</p>
           <Badge className="mt-2 bg-wellness-100 text-wellness-700 border-wellness-200">
             <Sparkles className="w-4 h-4 mr-1" />
             Private & Secure

@@ -20,7 +20,7 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
 
       <div className="relative max-w-7xl mx-auto text-center">
         {/* Badge */}
-        <Badge variant="secondary" className="mb-6 bg-gradient-to-r from-serenity-100 to-calm-100 text-serenity-700 border-serenity-200 animate-pulse-gentle">
+        <Badge variant="secondary" className="mb-6 bg-gradient-to-r from-serenity-100 to-calm-100 text-serenity-700 dark:text-serenity-900 border-serenity-200 animate-pulse-gentle">
           <Sparkles className="w-4 h-4 mr-2" />
           Your compassionate AI companion for emotional well-being
         </Badge>
@@ -29,31 +29,31 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-serenity-600 via-calm-600 to-wellness-600 bg-clip-text text-transparent animate-fade-in">
           Find Your Inner
           <br />
-         <span className="relative inline-block bg-gradient-to-r from-serenity-500 via-calm-500 to-wellness-500 bg-clip-text text-transparent">
-           Serenity
-           <div className="absolute -inset-1 bg-gradient-to-r from-serenity-500/20 to-calm-500/20 blur-xl rounded-lg z-[-1]"></div>
-         </span>
+          <span className="relative inline-block bg-gradient-to-r from-serenity-500 via-calm-500 to-wellness-500 bg-clip-text text-transparent">
+            Serenity
+            <div className="absolute -inset-1 bg-gradient-to-r from-serenity-500/20 to-calm-500/20 blur-xl rounded-lg z-[-1]"></div>
+          </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{animationDelay: '0.2s'}}>
+        <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-200 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{animationDelay: '0.2s'}}>
           Discover emotional balance through AI-powered conversations, mindful journaling, 
           and personalized wellness insights designed for your mental health journey.
         </p>
 
         {/* Feature Highlights */}
         <div className="flex flex-wrap justify-center gap-4 mb-10 animate-fade-in" style={{animationDelay: '0.4s'}}>
-          <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50">
+          <div className="flex items-center space-x-2 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50 dark:border-gray-700">
             <Heart className="w-5 h-5 text-serenity-500" />
-            <span className="text-gray-700 font-medium">Empathetic AI</span>
+            <span className="text-gray-700 dark:text-gray-100 font-medium">Empathetic AI</span>
           </div>
-          <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50">
+          <div className="flex items-center space-x-2 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50 dark:border-gray-700">
             <Shield className="w-5 h-5 text-wellness-500" />
-            <span className="text-gray-700 font-medium">Privacy First</span>
+            <span className="text-gray-700 dark:text-gray-100 font-medium">Privacy First</span>
           </div>
-          <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50">
+          <div className="flex items-center space-x-2 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50 dark:border-gray-700">
             <Zap className="w-5 h-5 text-calm-500" />
-            <span className="text-gray-700 font-medium">Instant Insights</span>
+            <span className="text-gray-700 dark:text-gray-100 font-medium">Instant Insights</span>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
           <Button 
             variant="outline" 
             size="lg"
-            className="px-8 py-6 text-lg font-semibold border-2 border-serenity-200 text-serenity-700 hover:bg-serenity-50 gentle-hover"
+            className="px-8 py-6 text-lg font-semibold border-2 border-serenity-200 text-serenity-700 hover:bg-serenity-50 gentle-hover dark:border-serenity-400 dark:text-serenity-100 dark:hover:bg-serenity-900"
           >
             Watch Demo
           </Button>

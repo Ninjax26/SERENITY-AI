@@ -46,7 +46,7 @@ const FeatureShowcase = ({ onFeatureClick }: FeatureShowcaseProps) => {
   return (
     <section className="py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-8">
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-foreground text-center mb-8">
           Explore Serenity AI Features
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -55,11 +55,11 @@ const FeatureShowcase = ({ onFeatureClick }: FeatureShowcaseProps) => {
             return (
               <Card key={feature.id} className="wellness-card gentle-hover">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="text-xl font-semibold">{feature.title}</span>
-                    <Icon className="w-6 h-6 text-gray-700" />
+                  <CardTitle className="flex items-center justify-between text-xl font-semibold text-gray-900 dark:text-foreground">
+                    <span>{feature.title}</span>
+                    <Icon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
                   </CardTitle>
-                  <CardDescription className="text-gray-600">{feature.description}</CardDescription>
+                  <CardDescription className="text-gray-600 dark:text-muted-foreground">{feature.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Button

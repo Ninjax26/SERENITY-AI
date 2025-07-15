@@ -12,7 +12,7 @@ interface ReplyItemProps {
 
 const ReplyItem: React.FC<ReplyItemProps> = ({ reply }) => {
   return (
-    <div className="bg-gray-100 rounded p-2 text-sm">{reply.content}</div>
+    <div className="bg-muted dark:bg-gray-800 rounded p-2 text-sm text-foreground dark:text-gray-100">{reply.content}</div>
   );
 };
 

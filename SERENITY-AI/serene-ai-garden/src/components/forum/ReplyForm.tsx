@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
 interface ReplyFormProps {
-  postId: string;
-  parentId?: string | null;
+  postId: number;
 }
 
-const ReplyForm: React.FC<ReplyFormProps> = ({ postId, parentId = null }) => {
+const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +16,6 @@ const ReplyForm: React.FC<ReplyFormProps> = ({ postId, parentId = null }) => {
       post_id: postId,
       content,
       author: "Anonymous",
-      parent_id: parentId,
     });
     setLoading(false);
     if (error) {
@@ -30,15 +28,15 @@ const ReplyForm: React.FC<ReplyFormProps> = ({ postId, parentId = null }) => {
   return (
     <form onSubmit={handleSubmit} className="mt-2">
       <input
-        className="w-full border rounded p-1 text-sm"
+        className="w-full border rounded p-1 text-sm bg-background dark:bg-gray-900 text-foreground dark:text-gray-100"
         type="text"
-        placeholder={parentId ? "Write a nested reply..." : "Write a reply..."}
+        placeholder="Write a reply..."
         value={content}
         onChange={e => setContent(e.target.value)}
         required
         disabled={loading}
       />
-      <button type="submit" className="bg-blue-500 text-white px-2 py-1 rounded text-xs mt-1" disabled={loading}>
+      <button type="submit" className="bg-blue-500 dark:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1" disabled={loading}>
         {loading ? "Replying..." : "Reply"}
       </button>
     </form>

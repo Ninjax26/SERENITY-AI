@@ -55,7 +55,6 @@ const CommunityForum: React.FC = () => {
   const [userVoted, setUserVoted] = useState<Record<string, boolean>>({});
   const [userLiked, setUserLiked] = useState<Record<string, boolean>>({});
   const [user, setUser] = useState<User | null>(null);
-  const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({});
 
   // Fetch current user
   useEffect(() => {
@@ -172,13 +171,13 @@ const CommunityForum: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-card dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Community Support Forum</h1>
+              <h1 className="text-2xl font-bold text-foreground dark:text-gray-100">Community Support Forum</h1>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -196,7 +195,7 @@ const CommunityForum: React.FC = () => {
                     </AvatarFallback>
                   </Avatar>
                   {user.user_metadata?.name && (
-                    <span className="ml-1 font-medium text-gray-800">{user.user_metadata.name}</span>
+                    <span className="ml-1 font-medium text-foreground dark:text-gray-100">{user.user_metadata.name}</span>
                   )}
                 </div>
               ) : (
@@ -236,7 +235,6 @@ const CommunityForum: React.FC = () => {
                     </Badge>
                   </div>
                 ))}
-                <div className="text-xs text-gray-400 mt-2">Categories will be updated in the future.</div>
               </CardContent>
             </Card>
 
@@ -383,22 +381,12 @@ const CommunityForum: React.FC = () => {
                                 {postVotes[post.id] || 0}
                               </Button>
                               {/* Removed Like Button */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-600 hover:text-blue-600"
-                                onClick={() => setOpenReplies(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                              >
+                              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
                                 <MessageCircle className="w-4 h-4 mr-1" />
-                                Comments
+                                0
                               </Button>
                             </div>
                           </div>
-                          {openReplies[post.id] && (
-                            <div className="mt-4">
-                              <ReplyList postId={post.id} />
-                            </div>
-                          )}
                         </div>
                       </div>
                     </CardContent>

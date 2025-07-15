@@ -1,6 +1,5 @@
 # SERENITY-AI: Advanced Mental Health & Wellness Platform
-WEBSITE LINK:-https://serenityai-ten.vercel.app/
-
+WEBSITE LINK:-https://www.serenity-ai.xyz/
 ## 🌟 Project Overview
 
 SERENITY-AI is a comprehensive mental health and wellness platform that combines artificial intelligence with human-centered design to provide personalized emotional support, mood tracking, journaling, and mindfulness tools. The platform is built with modern web technologies and focuses on creating a safe, secure, and supportive environment for users to manage their mental health.

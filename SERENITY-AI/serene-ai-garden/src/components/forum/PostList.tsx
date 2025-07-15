@@ -82,12 +82,12 @@ const PostList: React.FC = () => {
   return (
     <div className="space-y-4">
       {posts.map((post) => (
-        <Card key={post.id} className="p-4">
+        <Card key={post.id} className="p-4 bg-card dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">{post.title}</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground dark:text-gray-100">{post.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-gray-600 mb-2">{post.content}</div>
+            <div className="text-muted-foreground mb-2">{post.content}</div>
             <div className="flex justify-between items-center text-sm text-gray-500">
               <span>By {post.author}</span>
               <span>{new Date(post.created_at).toLocaleDateString()}</span>

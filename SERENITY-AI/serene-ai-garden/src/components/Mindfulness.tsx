@@ -21,6 +21,8 @@ import { Progress } from "@/components/ui/progress";
 const MindfulnessInterface = () => {
   const [breathingActive, setBreathingActive] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState('inhale'); // inhale, hold, exhale
+  const [breathingPhaseTime, setBreathingPhaseTime] = useState(0);
+  const [breathingTimeLeft, setBreathingTimeLeft] = useState(0);
   const [breathingCycle, setBreathingCycle] = useState(0);
   const [meditationActive, setMeditationActive] = useState(false);
   const [meditationTimer, setMeditationTimer] = useState(300); // 5 minutes default
@@ -262,99 +264,28 @@ const MindfulnessInterface = () => {
   ];
 
   // Breathing Timer Component
-  const BreathingTimer = ({ exercise, isActive, onComplete, onPhaseChange }) => {
-    const [timeLeft, setTimeLeft] = useState(exercise.duration);
-    const [phase, setPhase] = useState("inhale");
-    const [phaseTime, setPhaseTime] = useState(exercise.inhaleTime);
-    const [isPaused, setIsPaused] = useState(false);
-    const prevActiveRef = React.useRef(isActive);
-    const prevExerciseIdRef = React.useRef(exercise.id);
-
-    // Store initial phase time for progress calculation
-    const [initialPhaseTime, setInitialPhaseTime] = useState(exercise.inhaleTime);
-    useEffect(() => { setInitialPhaseTime(phaseTime); }, [phase]);
-
-    // Only reset timer when isActive transitions from false to true or exercise.id changes
-    useEffect(() => {
-      const isExerciseChanged = prevExerciseIdRef.current !== exercise.id;
-      if ((isActive && !prevActiveRef.current) || isExerciseChanged) {
-        setTimeLeft(exercise.duration);
-        setPhase("inhale");
-        setPhaseTime(exercise.inhaleTime);
-        if (onPhaseChange) onPhaseChange("inhale", exercise.inhaleTime);
-      }
-      prevActiveRef.current = isActive;
-      prevExerciseIdRef.current = exercise.id;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isActive, exercise.id]);
-
-    useEffect(() => {
-      if (!isActive || isPaused) return;
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            onComplete();
-            return exercise.duration;
-          }
-          return prev - 1;
-        });
-        setPhaseTime((prev) => {
-          if (prev <= 1) {
-            let nextPhase = "inhale";
-            let nextPhaseTime = exercise.inhaleTime;
-            // Explicit phase logic using current phase state
-            if (phase === "inhale") {
-              if (typeof exercise.holdTime === "number" && exercise.holdTime > 0) {
-                nextPhase = "hold";
-                nextPhaseTime = exercise.holdTime;
-              } else {
-                nextPhase = "exhale";
-                nextPhaseTime = exercise.exhaleTime;
-              }
-            } else if (phase === "hold") {
-              nextPhase = "exhale";
-              nextPhaseTime = exercise.exhaleTime;
-            } else if (phase === "exhale") {
-              nextPhase = "inhale";
-              nextPhaseTime = exercise.inhaleTime;
-            }
-            setPhase(nextPhase);
-            setInitialPhaseTime(nextPhaseTime);
-            if (onPhaseChange) onPhaseChange(nextPhase, nextPhaseTime);
-            return nextPhaseTime;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }, [isActive, isPaused, exercise, onComplete, onPhaseChange, phase]);
-
+  const BreathingTimer = ({ timeLeft, phase, phaseTime, exercise }) => {
+    if (!isTimerActive || timeLeft == null || phase == null || phaseTime == null || !exercise) return null;
     const formatTime = (seconds) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
-
-    if (!isActive) return null;
-
-    // Map phase to step index for highlighting
     let currentStepIndex = 0;
-    if (exercise.title.includes("4-7-8")) {
-      if (phase === "inhale") currentStepIndex = 1;
-      else if (phase === "hold") currentStepIndex = 2;
-      else if (phase === "exhale") currentStepIndex = 3;
-    } else if (exercise.title.includes("Box")) {
-      if (phase === "inhale") currentStepIndex = 1;
-      else if (phase === "hold") currentStepIndex = 2;
-      else if (phase === "exhale") currentStepIndex = 3;
+    if (exercise.title.includes('4-7-8')) {
+      if (phase === 'inhale') currentStepIndex = 1;
+      else if (phase === 'hold') currentStepIndex = 2;
+      else if (phase === 'exhale') currentStepIndex = 3;
+    } else if (exercise.title.includes('Box')) {
+      if (phase === 'inhale') currentStepIndex = 1;
+      else if (phase === 'hold') currentStepIndex = 2;
+      else if (phase === 'exhale') currentStepIndex = 3;
     } else {
-      if (phase === "inhale") currentStepIndex = 2;
-      else if (phase === "exhale") currentStepIndex = 3;
+      if (phase === 'inhale') currentStepIndex = 2;
+      else if (phase === 'exhale') currentStepIndex = 3;
     }
-
     return (
       <div className="flex flex-col items-center mb-4 w-full">
-        {/* Fixed Total Timer */}
         <div className="mb-6 text-center">
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Time Remaining</div>
           <div className="text-3xl font-mono text-blue-600 dark:text-blue-400 font-bold">
@@ -831,6 +762,76 @@ const MindfulnessInterface = () => {
     setQuizResult(recommendation);
   };
 
+  // Add pause state
+  const [breathingIsPaused, setBreathingIsPaused] = useState(false);
+
+  // Move breathingIntervalRef outside the effect
+  const breathingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Add refs for phase and phaseTime
+  const breathingPhaseRef = React.useRef(breathingPhase);
+  const breathingPhaseTimeRef = React.useRef(breathingPhaseTime);
+
+  // Keep refs in sync with state
+  useEffect(() => { breathingPhaseRef.current = breathingPhase; }, [breathingPhase]);
+  useEffect(() => { breathingPhaseTimeRef.current = breathingPhaseTime; }, [breathingPhaseTime]);
+
+  // Update timer effect to NOT depend on breathingPhase
+  useEffect(() => {
+    if (!isTimerActive || breathingIsPaused || !selectedExercise) return;
+    if (breathingIntervalRef.current) clearInterval(breathingIntervalRef.current);
+    breathingIntervalRef.current = setInterval(() => {
+      setBreathingTimeLeft(prev => {
+        if (prev <= 1) {
+          setIsTimerActive(false);
+          clearInterval(breathingIntervalRef.current);
+          return selectedExercise.duration;
+        }
+        return prev - 1;
+      });
+      setBreathingPhaseTime(prev => {
+        if (prev <= 1) {
+          let nextPhase = 'inhale';
+          let nextPhaseTime = selectedExercise.inhaleTime;
+          // Use refs for latest phase
+          const phase = breathingPhaseRef.current;
+          if (phase === 'inhale') {
+            if (typeof selectedExercise.holdTime === 'number' && selectedExercise.holdTime > 0) {
+              nextPhase = 'hold';
+              nextPhaseTime = selectedExercise.holdTime;
+            } else {
+              nextPhase = 'exhale';
+              nextPhaseTime = selectedExercise.exhaleTime;
+            }
+          } else if (phase === 'hold') {
+            nextPhase = 'exhale';
+            nextPhaseTime = selectedExercise.exhaleTime;
+          } else if (phase === 'exhale') {
+            nextPhase = 'inhale';
+            nextPhaseTime = selectedExercise.inhaleTime;
+          }
+          setBreathingPhase(nextPhase);
+          setBreathingPhaseTime(nextPhaseTime);
+          return nextPhaseTime;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (breathingIntervalRef.current) clearInterval(breathingIntervalRef.current);
+    };
+  }, [isTimerActive, breathingIsPaused, selectedExercise]);
+
+  // When selecting a new exercise, initialize timer state and unpause
+  const handleSelectExercise = (exercise) => {
+    setSelectedExercise(exercise);
+    setBreathingTimeLeft(exercise.duration);
+    setBreathingPhase('inhale');
+    setBreathingPhaseTime(exercise.inhaleTime);
+    setIsTimerActive(false);
+    setBreathingIsPaused(false);
+  };
+
   return (
     <div className="min-h-screen p-6 space-y-6">
       <div className="max-w-4xl mx-auto">
@@ -900,7 +901,7 @@ const MindfulnessInterface = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                         className="bg-white dark:bg-gray-800 rounded-xl p-6 cursor-pointer border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                        onClick={() => setSelectedExercise(exercise)}
+                        onClick={() => handleSelectExercise(exercise)}
                       >
                         <div className="text-center space-y-4">
                           <div className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -979,24 +980,43 @@ const MindfulnessInterface = () => {
                       {/* Timer Section */}
                       <div className="space-y-6">
                         <BreathingTimer
+                          timeLeft={breathingTimeLeft}
+                          phase={breathingPhase}
+                          phaseTime={breathingPhaseTime}
                           exercise={selectedExercise}
-                          isActive={isTimerActive}
-                          onComplete={() => setIsTimerActive(false)}
-                          onPhaseChange={(phase, phaseTime) => {
-                            setCurrentPhase(phase);
-                            setCurrentPhaseTime(phaseTime);
-                          }}
                         />
-                        <button
-                          onClick={() => setIsTimerActive(!isTimerActive)}
-                          className={`w-full py-3 rounded-lg font-medium transition-all ${
-                            isTimerActive
-                              ? "bg-red-500 hover:bg-red-600 text-white"
-                              : "bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white"
-                          }`}
-                        >
-                          {isTimerActive ? "Stop Exercise" : "Start Exercise"}
-                        </button>
+                        <div className="flex gap-4">
+                          <button
+                            onClick={() => {
+                              if (!isTimerActive) {
+                                setIsTimerActive(true);
+                                setBreathingIsPaused(false);
+                              } else {
+                                setBreathingIsPaused(!breathingIsPaused);
+                              }
+                            }}
+                            className={`w-full py-3 rounded-lg font-medium transition-all ${
+                              isTimerActive
+                                ? (breathingIsPaused ? "bg-green-500 hover:bg-green-600 text-white" : "bg-yellow-500 hover:bg-yellow-600 text-white")
+                                : "bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white"
+                            }`}
+                          >
+                            {!isTimerActive ? "Start Exercise" : (breathingIsPaused ? "Resume" : "Pause")}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBreathingTimeLeft(selectedExercise.duration);
+                              setBreathingPhase('inhale');
+                              setBreathingPhaseTime(selectedExercise.inhaleTime);
+                              setIsTimerActive(false);
+                              setBreathingIsPaused(false);
+                              if (breathingIntervalRef.current) clearInterval(breathingIntervalRef.current);
+                            }}
+                            className="w-full py-3 rounded-lg font-medium transition-all bg-red-500 hover:bg-red-600 text-white"
+                          >
+                            Reset
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -1173,6 +1193,7 @@ const MindfulnessInterface = () => {
                       {/* Timer Section */}
                       <div className="space-y-6">
                         <MeditationTimer
+                          key={selectedMeditationTechnique?.name}
                           technique={selectedMeditationTechnique}
                           isActive={isMeditationTimerActive}
                           onComplete={handleMeditationTimerComplete}

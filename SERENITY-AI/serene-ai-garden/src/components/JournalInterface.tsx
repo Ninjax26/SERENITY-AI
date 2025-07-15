@@ -12,7 +12,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CommunityForum from "../pages/Community";
-import DailyQuote from './DailyQuote';
 
 interface JournalEntry {
   id: string;
@@ -235,9 +234,8 @@ const JournalInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-calm-50 via-white to-wellness-50 p-4">
+    <div className="min-h-screen bg-background text-foreground p-4">
       <div className="max-w-6xl mx-auto">
-        <DailyQuote />
         <Tabs defaultValue="journal" className="w-full">
           <TabsList className="mb-6 w-full grid grid-cols-2">
             <TabsTrigger value="journal">Journal</TabsTrigger>
@@ -264,7 +262,7 @@ const JournalInterface = () => {
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Writing Area */}
               <div className="lg:col-span-2">
-                <Card className="wellness-card animate-fade-in">
+                <Card className="wellness-card bg-card text-card-foreground animate-fade-in">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Sparkles className="w-5 h-5 text-calm-500" />
@@ -273,7 +271,7 @@ const JournalInterface = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* AI Prompt */}
-                    <div className="bg-gradient-to-r from-calm-50 to-wellness-50 border border-calm-200 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-calm-50 to-wellness-50 dark:from-gray-900 dark:to-gray-800 border border-calm-200 dark:border-gray-700 rounded-lg p-4">
                       <div className="flex items-center space-x-2 mb-2">
                         <Lightbulb className="w-4 h-4 text-calm-600" />
                         <span className="text-sm font-medium text-calm-700">Writing Prompt</span>
@@ -330,7 +328,7 @@ const JournalInterface = () => {
               </div>
               {/* Journal History */}
               <div className="lg:col-span-1">
-                <Card className="wellness-card animate-fade-in" style={{animationDelay: '0.2s'}}>
+                <Card className="wellness-card bg-card text-card-foreground animate-fade-in" style={{animationDelay: '0.2s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Calendar className="w-5 h-5 text-wellness-500" />
@@ -369,7 +367,7 @@ const JournalInterface = () => {
                   </CardContent>
                 </Card>
                 {/* Writing Stats */}
-                <Card className="wellness-card mt-6 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                <Card className="wellness-card bg-card text-card-foreground mt-6 animate-fade-in" style={{animationDelay: '0.4s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Tag className="w-5 h-5 text-serenity-500" />

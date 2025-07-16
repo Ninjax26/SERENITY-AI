@@ -36,6 +36,8 @@ const ChatInterface = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loginWarning, setLoginWarning] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,14 +46,19 @@ const ChatInterface = () => {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      if (data.user) {
+      if (!data.user) {
+        setLoginWarning('You must be signed in to chat with the AI Companion. Please sign in.');
+      } else {
+        setLoginWarning(null);
         supabase
           .from('chat_messages')
           .select('*')
           .eq('user_id', data.user.id)
           .order('created_at', { ascending: true })
-          .then(({ data: rows }) => {
-            if (rows) {
+          .then(({ data: rows, error }) => {
+            if (error) {
+              setError('Failed to load chat messages.');
+            } else if (rows) {
               setMessages(rows.map((row: any) => ({
                 id: row.id,
                 content: row.content,
@@ -87,7 +94,12 @@ const ChatInterface = () => {
   }, []);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user) return;
+    setError(null);
+    if (!newMessage.trim()) return;
+    if (!user) {
+      setLoginWarning('You must be signed in to chat with the AI Companion. Please sign in.');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -100,13 +112,16 @@ const ChatInterface = () => {
     setNewMessage('');
     setIsTyping(true);
     // Save to Supabase
-    await supabase.from('chat_messages').insert({
+    const { error: insertError } = await supabase.from('chat_messages').insert({
       user_id: user.id,
       content: userMessage.content,
       sender: userMessage.sender,
       created_at: userMessage.timestamp.toISOString(),
       emotion: userMessage.emotion || null
     });
+    if (insertError) {
+      setError('Failed to save message. Please try again.');
+    }
 
     try {
       // Conversation context: last 6 messages
@@ -288,6 +303,17 @@ const ChatInterface = () => {
   return (
     <div className="min-h-screen bg-background text-foreground p-4">
       <div className="max-w-4xl mx-auto">
+        {/* Error and Login Warning */}
+        {loginWarning && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
+            {loginWarning}
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-800 border border-red-300 rounded">
+            {error}
+          </div>
+        )}
         {/* Export Buttons */}
         <div className="flex justify-end gap-2 mb-2">
           <Button variant="outline" size="sm" onClick={exportChatAsCSV}>Export as CSV</Button>

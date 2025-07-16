@@ -47,6 +47,8 @@ const JournalInterface = () => {
     }
   ]);
   const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loginWarning, setLoginWarning] = useState<string | null>(null);
 
   const writingPrompts = [
     "What am I most grateful for today?",
@@ -62,14 +64,19 @@ const JournalInterface = () => {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      if (data.user) {
+      if (!data.user) {
+        setLoginWarning('You must be signed in to save your journal entries. Please sign in.');
+      } else {
+        setLoginWarning(null);
         supabase
           .from('journal_entries')
           .select('*')
           .eq('user_id', data.user.id)
           .order('created_at', { ascending: false })
-          .then(({ data: rows }) => {
-            if (rows) {
+          .then(({ data: rows, error }) => {
+            if (error) {
+              setError('Failed to load journal entries.');
+            } else if (rows) {
               setJournalEntries(rows.map((row: any) => ({
                 id: row.id,
                 title: row.title,
@@ -86,7 +93,12 @@ const JournalInterface = () => {
   }, []);
 
   const handleSaveEntry = async () => {
-    if (!currentEntry.trim() || !user) return;
+    setError(null);
+    if (!currentEntry.trim()) return;
+    if (!user) {
+      setLoginWarning('You must be signed in to save your journal entries. Please sign in.');
+      return;
+    }
 
     // Simulate sentiment analysis
     const sentiment = currentEntry.toLowerCase().includes('happy') || currentEntry.toLowerCase().includes('grateful') || currentEntry.toLowerCase().includes('joy')
@@ -109,7 +121,7 @@ const JournalInterface = () => {
     setCurrentEntry('');
     setCurrentTitle('');
     // Save to Supabase
-    await supabase.from('journal_entries').insert({
+    const { error: insertError } = await supabase.from('journal_entries').insert({
       user_id: user.id,
       title: newEntry.title,
       content: newEntry.content,
@@ -118,6 +130,9 @@ const JournalInterface = () => {
       word_count: newEntry.wordCount,
       created_at: newEntry.date.toISOString()
     });
+    if (insertError) {
+      setError('Failed to save entry. Please try again.');
+    }
   };
 
   // Add file import handlers
@@ -242,6 +257,17 @@ const JournalInterface = () => {
             <TabsTrigger value="forum">Forum</TabsTrigger>
           </TabsList>
           <TabsContent value="journal">
+            {/* Error and Login Warning */}
+            {loginWarning && (
+              <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
+                {loginWarning}
+              </div>
+            )}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-800 border border-red-300 rounded">
+                {error}
+              </div>
+            )}
             {/* Export Buttons */}
             <div className="flex justify-end gap-2 mb-2">
               <Button variant="outline" size="sm" onClick={exportJournalAsCSV}>Export as CSV</Button>

@@ -12,6 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CommunityForum from "../pages/Community";
+import { Input } from "@/components/ui/input";
 
 interface JournalEntry {
   id: string;
@@ -315,12 +316,12 @@ const JournalInterface = () => {
                     {/* Title Input */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-2 block">Entry Title (Optional)</label>
-                      <input
+                      <Input
                         type="text"
                         value={currentTitle}
                         onChange={(e) => setCurrentTitle(e.target.value)}
                         placeholder="Give your entry a title..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-calm-400 focus:ring-calm-400"
+                        className="w-full"
                       />
                     </div>
                     {/* Writing Area */}
@@ -366,7 +367,7 @@ const JournalInterface = () => {
                       {journalEntries.map((entry) => (
                         <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-gray-800 truncate">{entry.title}</h3>
+                            <h3 className="font-medium text-gray-800 dark:text-black">{entry.title}</h3>
                             <Badge className={`text-xs ${getSentimentColor(entry.sentiment)}`}>
                               {getSentimentEmoji(entry.sentiment)}
                             </Badge>

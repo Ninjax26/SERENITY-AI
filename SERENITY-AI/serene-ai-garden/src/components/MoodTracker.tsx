@@ -21,24 +21,53 @@ const MoodTracker = () => {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [moodNote, setMoodNote] = useState('');
   const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
-  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([
-    {
-      id: '1',
-      mood: 4,
-      emoji: '😊',
-      note: 'Had a great morning walk and productive work session',
-      date: new Date(Date.now() - 86400000),
-      factors: ['Exercise', 'Work']
-    },
-    {
-      id: '2',
-      mood: 3,
-      emoji: '😐',
-      note: 'Average day, feeling neutral',
-      date: new Date(Date.now() - 172800000),
-      factors: ['Sleep']
+  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch user and mood entries from Supabase
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoading(false);
+      if (data.user) {
+        fetchMoodEntries(data.user.id);
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchMoodEntries(session.user.id);
+      } else {
+        setMoodEntries([]);
+      }
+    });
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchMoodEntries = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('mood_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      setMoodEntries(data.map((row: any) => ({
+        id: row.id,
+        mood: row.mood,
+        emoji: row.emoji,
+        note: row.note,
+        date: new Date(row.created_at),
+        factors: row.factors || [],
+      })));
+    } else {
+      setMoodEntries([]);
     }
-  ]);
+  };
 
   const moodOptions = [
     { value: 1, emoji: '😢', label: 'Very Sad', color: 'text-red-500' },
@@ -52,23 +81,35 @@ const MoodTracker = () => {
     'Sleep', 'Exercise', 'Work', 'Social', 'Weather', 'Health', 'Family', 'Stress'
   ];
 
-  const handleMoodSubmit = () => {
-    if (selectedMood === null) return;
-
+  const handleMoodSubmit = async () => {
+    if (selectedMood === null || !user) return;
+    setSubmitting(true);
     const selectedMoodOption = moodOptions.find(m => m.value === selectedMood);
-    const newEntry: MoodEntry = {
-      id: Date.now().toString(),
+    const newEntry = {
+      user_id: user.id,
       mood: selectedMood,
       emoji: selectedMoodOption!.emoji,
       note: moodNote,
-      date: new Date(),
-      factors: selectedFactors
+      factors: selectedFactors,
+      created_at: new Date().toISOString(),
     };
-
-    setMoodEntries([newEntry, ...moodEntries]);
+    const { error } = await supabase.from('mood_entries').insert(newEntry);
+    setSubmitting(false);
+    if (!error) {
+      fetchMoodEntries(user.id);
+      toast({ title: "Mood entry saved!", description: "Your mood has been logged." });
+    } else {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
     setSelectedMood(null);
     setMoodNote('');
     setSelectedFactors([]);
+  };
+
+  const handleClearAll = async () => {
+    if (!user) return;
+    await supabase.from('mood_entries').delete().eq('user_id', user.id);
+    setMoodEntries([]);
   };
 
   const averageMood = moodEntries.length > 0 
@@ -84,7 +125,7 @@ const MoodTracker = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4">
+    <div className="min-h-screen bg-gradient-to-br from-wellness-50 via-white to-serenity-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
@@ -92,17 +133,17 @@ const MoodTracker = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-wellness-500 to-serenity-500 rounded-full flex items-center justify-center">
               <Smile className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-wellness-600 to-serenity-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-wellness-600 to-serenity-600 bg-clip-text text-transparent dark:from-wellness-400 dark:to-serenity-400">
               Mood Tracker
             </h1>
           </div>
-          <p className="text-gray-600">Track your emotional journey and discover patterns</p>
+          <p className="text-gray-600 dark:text-gray-300">Track your emotional journey and discover patterns</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Mood Input */}
           <div className="lg:col-span-1">
-            <Card className="wellness-card animate-fade-in">
+            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Heart className="w-5 h-5 text-wellness-500" />
@@ -112,7 +153,7 @@ const MoodTracker = () => {
               <CardContent className="space-y-6">
                 {/* Mood Selection */}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">Select your mood:</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">Select your mood:</p>
                   <div className="grid grid-cols-1 gap-2">
                     {moodOptions.map((mood) => (
                       <Button
@@ -122,7 +163,7 @@ const MoodTracker = () => {
                         className={`justify-start h-12 text-left ${
                           selectedMood === mood.value 
                             ? 'bg-wellness-500 text-white' 
-                            : 'hover:bg-wellness-50 border-wellness-200'
+                            : 'hover:bg-wellness-50 border-wellness-200 dark:hover:bg-gray-800 dark:border-gray-700'
                         }`}
                       >
                         <span className="text-2xl mr-3">{mood.emoji}</span>
@@ -134,7 +175,7 @@ const MoodTracker = () => {
 
                 {/* Factors */}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">What influenced your mood?:</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">What influenced your mood?:</p>
                   <div className="flex flex-wrap gap-2">
                     {moodFactors.map((factor) => (
                       <Badge
@@ -143,7 +184,7 @@ const MoodTracker = () => {
                         className={`cursor-pointer ${
                           selectedFactors.includes(factor)
                             ? 'bg-serenity-500 text-white'
-                            : 'hover:bg-serenity-50 border-serenity-200 text-serenity-700'
+                            : 'hover:bg-serenity-50 border-serenity-200 text-serenity-700 dark:hover:bg-gray-800 dark:border-gray-700 dark:text-serenity-200'
                         }`}
                         onClick={() => toggleFactor(factor)}
                       >
@@ -155,22 +196,29 @@ const MoodTracker = () => {
 
                 {/* Note */}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">Add a note (optional):</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">Add a note (optional):</p>
                   <Textarea
                     value={moodNote}
                     onChange={(e) => setMoodNote(e.target.value)}
                     placeholder="What happened today? How are you feeling?"
-                    className="border-wellness-200 focus:border-wellness-400 focus:ring-wellness-400"
+                    className="border-wellness-200 focus:border-wellness-400 focus:ring-wellness-400 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
                     rows={3}
                   />
                 </div>
 
                 <Button
                   onClick={handleMoodSubmit}
-                  disabled={selectedMood === null}
+                  disabled={selectedMood === null || loading || submitting}
                   className="w-full bg-gradient-to-r from-wellness-500 to-serenity-500 hover:from-wellness-600 hover:to-serenity-600 text-white"
                 >
-                  Log Mood Entry
+                  {submitting ? "Saving..." : "Log Mood Entry"}
+                </Button>
+                <Button
+                  onClick={handleClearAll}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white mt-2"
+                  disabled={loading || !user}
+                >
+                  Clear All Mood Entries
                 </Button>
               </CardContent>
             </Card>
@@ -179,7 +227,7 @@ const MoodTracker = () => {
           {/* Mood History & Analytics */}
           <div className="lg:col-span-2 space-y-8">
             {/* Analytics */}
-            <Card className="wellness-card animate-fade-in" style={{animationDelay: '0.2s'}}>
+            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.2s'}}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <TrendingUp className="w-5 h-5 text-serenity-500" />
@@ -189,26 +237,20 @@ const MoodTracker = () => {
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-wellness-600 mb-1">
-                      {averageMood.toFixed(1)}
-                    </div>
-                    <p className="text-sm text-gray-600">Average Mood</p>
+                    <div className="text-3xl font-bold text-wellness-600 mb-1">{averageMood.toFixed(1)}</div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Average Mood</p>
                     <div className="text-2xl mt-2">
                       {averageMood >= 4 ? '😊' : averageMood >= 3 ? '😐' : '🙁'}
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-serenity-600 mb-1">
-                      {moodEntries.length}
-                    </div>
-                    <p className="text-sm text-gray-600">Days Tracked</p>
+                    <div className="text-3xl font-bold text-serenity-600 mb-1">{moodEntries.length}</div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Days Tracked</p>
                     <div className="text-2xl mt-2">📅</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-calm-600 mb-1">
-                      {moodEntries.filter(e => e.mood >= 4).length}
-                    </div>
-                    <p className="text-sm text-gray-600">Good Days</p>
+                    <div className="text-3xl font-bold text-calm-600 mb-1">{moodEntries.filter(e => e.mood >= 4).length}</div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Good Days</p>
                     <div className="text-2xl mt-2">✨</div>
                   </div>
                 </div>
@@ -216,7 +258,7 @@ const MoodTracker = () => {
             </Card>
 
             {/* Recent Entries */}
-            <Card className="wellness-card animate-fade-in" style={{animationDelay: '0.4s'}}>
+            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.4s'}}>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Calendar className="w-5 h-5 text-calm-500" />
@@ -226,27 +268,25 @@ const MoodTracker = () => {
               <CardContent>
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {moodEntries.map((entry) => (
-                    <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:border-gray-700">
                       <div className="flex items-start space-x-3">
                         <div className="text-3xl">{entry.emoji}</div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-800">
+                            <span className="font-medium text-gray-800 dark:text-white">
                               {moodOptions.find(m => m.value === entry.mood)?.label}
                             </span>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
                               {entry.date.toLocaleDateString()}
                             </span>
                           </div>
                           {entry.note && (
-                            <p className="text-gray-600 text-sm mb-2">{entry.note}</p>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{entry.note}</p>
                           )}
                           {entry.factors.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {entry.factors.map((factor) => (
-                                <Badge key={factor} variant="secondary" className="text-xs">
-                                  {factor}
-                                </Badge>
+                                <Badge key={factor} variant="secondary" className="text-xs">{factor}</Badge>
                               ))}
                             </div>
                           )}

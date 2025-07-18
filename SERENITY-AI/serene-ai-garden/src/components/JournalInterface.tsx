@@ -12,7 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CommunityForum from "../pages/Community";
-import { Input } from "@/components/ui/input";
+import DailyQuote from './DailyQuote';
 
 interface JournalEntry {
   id: string;
@@ -48,8 +48,6 @@ const JournalInterface = () => {
     }
   ]);
   const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loginWarning, setLoginWarning] = useState<string | null>(null);
 
   const writingPrompts = [
     "What am I most grateful for today?",
@@ -65,19 +63,14 @@ const JournalInterface = () => {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      if (!data.user) {
-        setLoginWarning('You must be signed in to save your journal entries. Please sign in.');
-      } else {
-        setLoginWarning(null);
+      if (data.user) {
         supabase
           .from('journal_entries')
           .select('*')
           .eq('user_id', data.user.id)
           .order('created_at', { ascending: false })
-          .then(({ data: rows, error }) => {
-            if (error) {
-              setError('Failed to load journal entries.');
-            } else if (rows) {
+          .then(({ data: rows }) => {
+            if (rows) {
               setJournalEntries(rows.map((row: any) => ({
                 id: row.id,
                 title: row.title,
@@ -94,12 +87,7 @@ const JournalInterface = () => {
   }, []);
 
   const handleSaveEntry = async () => {
-    setError(null);
-    if (!currentEntry.trim()) return;
-    if (!user) {
-      setLoginWarning('You must be signed in to save your journal entries. Please sign in.');
-      return;
-    }
+    if (!currentEntry.trim() || !user) return;
 
     // Simulate sentiment analysis
     const sentiment = currentEntry.toLowerCase().includes('happy') || currentEntry.toLowerCase().includes('grateful') || currentEntry.toLowerCase().includes('joy')
@@ -122,7 +110,7 @@ const JournalInterface = () => {
     setCurrentEntry('');
     setCurrentTitle('');
     // Save to Supabase
-    const { error: insertError } = await supabase.from('journal_entries').insert({
+    await supabase.from('journal_entries').insert({
       user_id: user.id,
       title: newEntry.title,
       content: newEntry.content,
@@ -131,9 +119,6 @@ const JournalInterface = () => {
       word_count: newEntry.wordCount,
       created_at: newEntry.date.toISOString()
     });
-    if (insertError) {
-      setError('Failed to save entry. Please try again.');
-    }
   };
 
   // Add file import handlers
@@ -250,25 +235,15 @@ const JournalInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4">
+    <div className="min-h-screen bg-gradient-to-br from-calm-50 via-white to-wellness-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 p-4">
       <div className="max-w-6xl mx-auto">
+        <DailyQuote />
         <Tabs defaultValue="journal" className="w-full">
           <TabsList className="mb-6 w-full grid grid-cols-2">
             <TabsTrigger value="journal">Journal</TabsTrigger>
             <TabsTrigger value="forum">Forum</TabsTrigger>
           </TabsList>
           <TabsContent value="journal">
-            {/* Error and Login Warning */}
-            {loginWarning && (
-              <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
-                {loginWarning}
-              </div>
-            )}
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 text-red-800 border border-red-300 rounded">
-                {error}
-              </div>
-            )}
             {/* Export Buttons */}
             <div className="flex justify-end gap-2 mb-2">
               <Button variant="outline" size="sm" onClick={exportJournalAsCSV}>Export as CSV</Button>
@@ -280,16 +255,16 @@ const JournalInterface = () => {
                 <div className="w-12 h-12 bg-gradient-to-br from-calm-500 to-wellness-500 rounded-full flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-white" />
                 </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-calm-600 to-wellness-600 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-calm-600 to-wellness-600 bg-clip-text text-transparent dark:from-calm-400 dark:to-wellness-400">
                   Smart Journal
                 </h1>
               </div>
-              <p className="text-gray-600">Express yourself with AI-powered writing prompts and insights</p>
+              <p className="text-gray-600 dark:text-gray-300">Express yourself with AI-powered writing prompts and insights</p>
             </div>
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Writing Area */}
               <div className="lg:col-span-2">
-                <Card className="wellness-card bg-card text-card-foreground animate-fade-in">
+                <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Sparkles className="w-5 h-5 text-calm-500" />
@@ -298,64 +273,62 @@ const JournalInterface = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* AI Prompt */}
-                    <div className="bg-gradient-to-r from-calm-50 to-wellness-50 dark:from-gray-900 dark:to-gray-800 border border-calm-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="bg-gradient-to-r from-calm-50 to-wellness-50 border border-calm-200 rounded-lg p-4 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700">
                       <div className="flex items-center space-x-2 mb-2">
                         <Lightbulb className="w-4 h-4 text-calm-600" />
-                        <span className="text-sm font-medium text-calm-700">Writing Prompt</span>
+                        <span className="text-sm font-medium text-calm-700 dark:text-calm-200">Writing Prompt</span>
                       </div>
-                      <p className="text-calm-800 italic mb-3">"{currentPrompt}"</p>
+                      <p className="text-calm-800 dark:text-calm-100 italic mb-3">"{currentPrompt}"</p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentPrompt(writingPrompts[Math.floor(Math.random() * writingPrompts.length)])}
-                        className="text-calm-600 border-calm-300 hover:bg-calm-50"
+                        className="text-calm-600 border-calm-300 hover:bg-calm-50 dark:text-calm-200 dark:border-calm-600 dark:hover:bg-gray-800"
                       >
                         New Prompt
                       </Button>
                     </div>
                     {/* Title Input */}
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Entry Title (Optional)</label>
-                      <Input
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Entry Title (Optional)</label>
+                      <input
                         type="text"
                         value={currentTitle}
                         onChange={(e) => setCurrentTitle(e.target.value)}
                         placeholder="Give your entry a title..."
-                        className="w-full"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-calm-400 focus:ring-calm-400 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
                     </div>
                     {/* Writing Area */}
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Your Thoughts</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Your Thoughts</label>
                       <Textarea
                         value={currentEntry}
                         onChange={(e) => setCurrentEntry(e.target.value)}
                         placeholder="Start writing your thoughts here..."
-                        className="min-h-64 border-calm-200 focus:border-calm-400 focus:ring-calm-400 resize-none"
+                        className="min-h-64 border-calm-200 focus:border-calm-400 focus:ring-calm-400 resize-none bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-sm text-gray-500">
-                          {currentEntry.split(' ').filter(word => word.length > 0).length} words
-                        </span>
-                        <Button
-                          onClick={handleSaveEntry}
-                          disabled={!currentEntry.trim()}
-                          className="bg-gradient-to-r from-calm-500 to-wellness-500 hover:from-calm-600 hover:to-wellness-600 text-white"
-                        >
-                          Save Entry
-                        </Button>
-                        <label className="ml-2 cursor-pointer bg-gray-100 border border-gray-200 px-3 py-2 rounded-md text-xs text-gray-700 hover:bg-gray-200">
-                          Import PDF/CSV
-                          <input type="file" accept=".csv,application/pdf" onChange={handleFileImport} style={{ display: 'none' }} />
-                        </label>
-                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-300">
+                        {currentEntry.split(' ').filter(word => word.length > 0).length} words
+                      </span>
+                      <Button
+                        onClick={handleSaveEntry}
+                        disabled={!currentEntry.trim()}
+                        className="bg-gradient-to-r from-calm-500 to-wellness-500 hover:from-calm-600 hover:to-wellness-600 text-white"
+                      >
+                        Save Entry
+                      </Button>
+                      <label className="ml-2 cursor-pointer bg-gray-100 border border-gray-200 px-3 py-2 rounded-md text-xs text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
+                        Import PDF/CSV
+                        <input type="file" accept=".csv,application/pdf" onChange={handleFileImport} style={{ display: 'none' }} />
+                      </label>
                     </div>
                   </CardContent>
                 </Card>
               </div>
               {/* Journal History */}
               <div className="lg:col-span-1">
-                <Card className="wellness-card bg-card text-card-foreground animate-fade-in" style={{animationDelay: '0.2s'}}>
+                <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.2s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Calendar className="w-5 h-5 text-wellness-500" />
@@ -365,36 +338,28 @@ const JournalInterface = () => {
                   <CardContent>
                     <div className="space-y-4 max-h-96 overflow-y-auto">
                       {journalEntries.map((entry) => (
-                        <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer dark:border-gray-700">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-gray-800 dark:text-black">{entry.title}</h3>
-                            <Badge className={`text-xs ${getSentimentColor(entry.sentiment)}`}>
-                              {getSentimentEmoji(entry.sentiment)}
-                            </Badge>
+                            <h3 className="font-medium text-gray-800 dark:text-white truncate">{entry.title}</h3>
+                            <Badge className={`text-xs ${getSentimentColor(entry.sentiment)}`}>{getSentimentEmoji(entry.sentiment)}</Badge>
                           </div>
-                          <p className="text-sm text-gray-600 line-clamp-3 mb-2">
-                            {entry.content}
-                          </p>
-                          <div className="flex items-center justify-between text-xs text-gray-500">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mb-2">{entry.content}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>{entry.date.toLocaleDateString()}</span>
                             <span>{entry.wordCount} words</span>
                           </div>
-                          {entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {entry.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  #{tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {entry.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
                 {/* Writing Stats */}
-                <Card className="wellness-card bg-card text-card-foreground mt-6 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                <Card className="wellness-card mt-6 animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.4s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Tag className="w-5 h-5 text-serenity-500" />
@@ -404,28 +369,20 @@ const JournalInterface = () => {
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-wellness-600 mb-1">
-                          {journalEntries.length}
-                        </div>
-                        <p className="text-xs text-gray-600">Total Entries</p>
+                        <div className="text-2xl font-bold text-wellness-600 mb-1">{journalEntries.length}</div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">Total Entries</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-calm-600 mb-1">
-                          {journalEntries.reduce((sum, entry) => sum + entry.wordCount, 0)}
-                        </div>
-                        <p className="text-xs text-gray-600">Words Written</p>
+                        <div className="text-2xl font-bold text-calm-600 mb-1">{journalEntries.reduce((sum, entry) => sum + entry.wordCount, 0)}</div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">Words Written</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-serenity-600 mb-1">
-                          {journalEntries.filter(e => e.sentiment === 'positive').length}
-                        </div>
-                        <p className="text-xs text-gray-600">Positive Days</p>
+                        <div className="text-2xl font-bold text-serenity-600 mb-1">{journalEntries.filter(e => e.sentiment === 'positive').length}</div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">Positive Days</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-wellness-600 mb-1">
-                          7
-                        </div>
-                        <p className="text-xs text-gray-600">Day Streak</p>
+                        <div className="text-2xl font-bold text-wellness-600 mb-1">7</div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">Day Streak</p>
                       </div>
                     </div>
                   </CardContent>

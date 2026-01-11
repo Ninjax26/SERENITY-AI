@@ -11,8 +11,8 @@ const founders = [
   {
     name: 'Dhruv Patel',
     role: 'Co-Founder & Backend Developer',
-    github: 'https://github.com/dhruv8903',
-    linkedin: 'https://www.linkedin.com/in/dhruv-patel-53046b206/',
+    github: 'https://github.com/crimsonXcatalyst',
+    linkedin: 'https://www.linkedin.com/in/dhruvkrpatel/',
     bio: 'Dhruv specializes in backend architecture and system design, ensuring Serenity AI is robust, scalable, and secure.'
   }
 ];

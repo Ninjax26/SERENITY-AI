@@ -117,7 +117,7 @@ const Footer = () => {
         {/* FAQAccordion removed */}
         <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-gray-600">
-            © 2025 Serenity AI. Made with <Heart className="w-4 h-4 text-red-500 inline mx-1" /> for mental wellness.
+            © 2025 Dhruv Patel. Made with <Heart className="w-4 h-4 text-red-500 inline mx-1" /> for mental wellness.
           </p>
           <div className="mt-4 md:mt-0 text-sm text-gray-500">
             Remember: You matter, and support is always within reach. Take a moment for yourself today.

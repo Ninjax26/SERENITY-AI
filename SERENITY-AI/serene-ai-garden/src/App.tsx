@@ -7,6 +7,15 @@ import { lazy, Suspense } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import EnvWarning from "./components/EnvWarning";
+import About from "./pages/About";
+import Careers from "./pages/Careers";
+import Press from "./pages/Press";
+import Blog from "./pages/Blog";
+import HelpCenter from "./pages/HelpCenter";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import CrisisResources from "./pages/CrisisResources";
 
 const AICompanion = lazy(() => import("./pages/AICompanion"));
 const Community = lazy(() => import("./pages/Community"));

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import CommunityForum from "../pages/Community";
 import DailyQuote from './DailyQuote';
+const CommunityForum = lazy(() => import("../pages/Community"));
 
 interface JournalEntry {
   id: string;
@@ -397,7 +397,9 @@ const JournalInterface = () => {
             </div>
           </TabsContent>
           <TabsContent value="forum">
-            <CommunityForum />
+            <Suspense fallback={<div className="py-10 text-center text-gray-500">Loading community forum...</div>}>
+              <CommunityForum />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

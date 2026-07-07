@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar, TrendingUp, Smile, Frown, Meh, Heart, Zap } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from "@/hooks/use-toast";
+import type { User, MoodEntryRow } from '@/lib/types';
 
 interface MoodEntry {
   id: string;
@@ -22,7 +23,7 @@ const MoodTracker = () => {
   const [moodNote, setMoodNote] = useState('');
   const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -56,7 +57,7 @@ const MoodTracker = () => {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (!error && data) {
-      setMoodEntries(data.map((row: any) => ({
+      setMoodEntries(data.map((row: MoodEntryRow) => ({
         id: row.id,
         mood: row.mood,
         emoji: row.emoji,
@@ -107,10 +108,10 @@ const MoodTracker = () => {
       setMoodNote('');
       setSelectedFactors([]);
       toast({ title: "Mood entry saved!", description: "Your mood has been logged." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Error",
-        description: err?.message || "Failed to save mood entry.",
+        description: (err instanceof Error ? err.message : null) || "Failed to save mood entry.",
         variant: "destructive",
       });
     } finally {

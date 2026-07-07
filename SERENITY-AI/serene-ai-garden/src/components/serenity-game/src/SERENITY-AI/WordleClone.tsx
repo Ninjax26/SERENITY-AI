@@ -141,8 +141,8 @@ const WordleClone: React.FC = () => {
             const x = xCursor;
             const y = startY + rowIndex * (keySize + keySpacing);
 
-            let rectColor = 0xcccccc;
-            let rectStroke = 0x888888;
+            const rectColor = 0xcccccc;
+            const rectStroke = 0x888888;
             const keyRect = this.add.rectangle(x + keyWidth / 2, y + keySize / 2, keyWidth, keySize, rectColor);
             keyRect.setStrokeStyle(2, rectStroke);
             keyRect.setInteractive();

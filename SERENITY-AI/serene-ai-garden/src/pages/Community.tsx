@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Bell,
   BookOpen,
   ChevronUp,
-  Heart,
   MessageCircle,
   MoreHorizontal,
-  Pin,
   Search,
   Settings,
   Star,
@@ -23,7 +20,8 @@ import {
   Zap,
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
-import type { User } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
+import type { User, PostVoteRow, PostLikeRow } from "@/lib/types";
 
 interface Post {
   id: string;
@@ -49,76 +47,56 @@ const CommunityForum: React.FC = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [posting, setPosting] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [postVotes, setPostVotes] = useState<Record<string, number>>({});
-  const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const [userVoted, setUserVoted] = useState<Record<string, boolean>>({});
-  const [userLiked, setUserLiked] = useState<Record<string, boolean>>({});
   const [user, setUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
-  // Fetch current user
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      console.log('Fetched user:', data.user);
-      setUser(data.user || null);
-      setUserId(data.user?.id || null);
+      const id = data.user?.id ?? null;
+      setUser(data.user ?? null);
+      setUserId(id);
+      setAuthLoading(false);
+      fetchPosts(id);
     });
-  }, []);
+  }, [fetchPosts]);
 
-  // Fetch posts and votes/likes
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async (currentUserId: string | null) => {
     try {
-      const { data: posts, error: postsError } = await supabase
+      setIsLoading(true);
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
         .order('created_at', { ascending: false });
-      console.log('Fetched posts:', posts, 'Error:', postsError);
       if (postsError) throw postsError;
-      setPosts(posts || []);
-      // Fetch votes and likes for all posts
-      const postIds = (posts || []).map((p: any) => p.id);
-      if (postIds.length > 0) {
-        // Upvotes
-        const { data: votes, error: votesError } = await supabase
+      setPosts(postsData || []);
+
+      if ((postsData || []).length > 0) {
+        const voteQuery = supabase
           .from('post_votes')
           .select('post_id, user_id');
+        if (currentUserId) voteQuery.eq('user_id', currentUserId);
+        const { data: votes, error: votesError } = await voteQuery;
         if (votesError) throw votesError;
-        console.log('Fetched votes:', votes, 'Error:', votesError);
+
         const voteCounts: Record<string, number> = {};
         const voted: Record<string, boolean> = {};
-        votes?.forEach((v: any) => {
-          voteCounts[v.post_id] = (voteCounts[v.post_id] || 0) + 1;
-          if (v.user_id === userId) voted[v.post_id] = true;
+        (votes as PostVoteRow[] | null)?.forEach((vote) => {
+          voteCounts[vote.post_id] = (voteCounts[vote.post_id] || 0) + 1;
+          if (currentUserId && vote.user_id === currentUserId) voted[vote.post_id] = true;
         });
         setPostVotes(voteCounts);
         setUserVoted(voted);
-        // Likes
-        const { data: likes, error: likesError } = await supabase
-          .from('post_likes')
-          .select('post_id, user_id');
-        if (likesError) throw likesError;
-        console.log('Fetched likes:', likes, 'Error:', likesError);
-        const likeCounts: Record<string, number> = {};
-        const liked: Record<string, boolean> = {};
-        likes?.forEach((l: any) => {
-          likeCounts[l.post_id] = (likeCounts[l.post_id] || 0) + 1;
-          if (l.user_id === userId) liked[l.post_id] = true;
-        });
-        setPostLikes(likeCounts);
-        setUserLiked(liked);
       }
-    } catch (err) {
+    } catch {
       setError("Failed to fetch posts");
-      console.error("Post fetch error:", err);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (userId !== undefined) fetchPosts();
-    // eslint-disable-next-line
-  }, [userId]);
+  }, []);
 
   const handlePost = async () => {
     if (!title.trim() || !content.trim()) return;
@@ -129,59 +107,37 @@ const CommunityForum: React.FC = () => {
     setPosting(true);
     setError(null);
     try {
-      console.log('Creating post:', { title, content, author: user?.user_metadata?.name || "Anonymous", user_id: userId });
-      const { data, error } = await supabase.from('posts').insert({
+      const { error: insertError } = await supabase.from('posts').insert({
         title,
         content,
         author: user?.user_metadata?.name || "Anonymous",
         user_id: userId,
       });
-      if (error) throw error;
-      console.log('Post insert result:', data, error);
+      if (insertError) throw insertError;
       setTitle("");
       setContent("");
-      await fetchPosts();
-    } catch (err) {
+      await fetchPosts(userId);
+      toast({ title: "Posted!", description: "Your discussion has been published." });
+    } catch {
       setError("Failed to create post. Please try again.");
-      console.error("Post creation error:", err);
     } finally {
       setPosting(false);
     }
   };
 
-  // Upvote a post
   const handleUpvote = async (postId: string) => {
     if (!userId) return;
     try {
-      console.log('Upvoting post:', postId, 'by user:', userId);
-      const { data, error } = await supabase.from('post_votes').insert({ post_id: postId, user_id: userId });
-      if (error) throw error;
-      console.log('Upvote result:', data, error);
-      await fetchPosts();
-    } catch (err) {
-      alert('Error upvoting post');
-      console.error('Upvote error:', err);
-    }
-  };
-
-  // Like a post (should be unused)
-  const handleLike = async (postId: string) => {
-    if (!userId) return;
-    try {
-      console.log('Liking post:', postId, 'by user:', userId);
-      const { data, error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
-      if (error) throw error;
-      console.log('Like result:', data, error);
-      await fetchPosts();
-    } catch (err) {
-      alert('Error liking post');
-      console.error('Like error:', err);
+      const { error: voteError } = await supabase.from('post_votes').insert({ post_id: postId, user_id: userId });
+      if (voteError) throw voteError;
+      await fetchPosts(userId);
+    } catch {
+      toast({ title: "Error", description: "Could not upvote this post.", variant: "destructive" });
     }
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
       <header className="bg-card dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -199,7 +155,7 @@ const CommunityForum: React.FC = () => {
                     <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg?height=32&width=32"} />
                     <AvatarFallback>
                       {user.user_metadata?.name
-                        ? user.user_metadata.name.split(" ").map(n => n[0]).join("").toUpperCase()
+                        ? user.user_metadata.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()
                         : "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -222,7 +178,6 @@ const CommunityForum: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
@@ -256,21 +211,11 @@ const CommunityForum: React.FC = () => {
                   <span className="text-sm text-gray-600">Total Posts</span>
                   <span className="font-semibold">{posts.length}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Active Users</span>
-                  <span className="font-semibold">1,234</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Solved Issues</span>
-                  <span className="font-semibold">892</span>
-                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Create Post Form */}
             <Card>
               <CardHeader>
                 <h2 className="text-xl font-semibold">Start a New Discussion</h2>
@@ -290,9 +235,7 @@ const CommunityForum: React.FC = () => {
                   disabled={posting}
                 />
                 <div className="flex justify-between items-center">
-                  <div className="flex space-x-2">
-                    <Badge variant="outline">General Discussion</Badge>
-                  </div>
+                  <Badge variant="outline">General Discussion</Badge>
                   <Button className="bg-blue-600 hover:bg-blue-700" onClick={handlePost} disabled={posting}>
                     {posting ? "Posting..." : "Post to Forum"}
                   </Button>
@@ -300,7 +243,6 @@ const CommunityForum: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Error Alert */}
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>
@@ -311,24 +253,17 @@ const CommunityForum: React.FC = () => {
               </Alert>
             )}
 
-            {/* Filter and Sort */}
             <div className="flex justify-between items-center">
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Trending
                 </Button>
-                <Button variant="outline" size="sm">
-                  Latest
-                </Button>
-                <Button variant="outline" size="sm">
-                  Unanswered
-                </Button>
+                <Button variant="outline" size="sm">Latest</Button>
               </div>
               <span className="text-sm text-gray-600">{posts.length} discussions</span>
             </div>
 
-            {/* Posts List */}
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-center text-gray-500">Loading posts...</div>
@@ -341,24 +276,16 @@ const CommunityForum: React.FC = () => {
                           <AvatarImage src={"/placeholder.svg"} />
                           <AvatarFallback>{post.author.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-
                         <div className="flex-1 space-y-2">
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-semibold text-lg hover:text-blue-600 cursor-pointer">{post.title}</h3>
-                              </div>
+                              <h3 className="font-semibold text-lg">{post.title}</h3>
                               <div className="flex items-center space-x-2 text-sm text-gray-600">
                                 <span className="font-medium">{post.author}</span>
                                 <span>•</span>
                                 <span>{new Date(post.created_at).toLocaleString()}</span>
-                                <span>•</span>
-                                <Badge variant="outline" className="text-xs">
-                                  General Discussion
-                                </Badge>
                               </div>
                             </div>
-
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -374,39 +301,23 @@ const CommunityForum: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-
                           <p className="text-gray-700 leading-relaxed">{post.content}</p>
-
-                          <div className="flex items-center justify-between pt-2">
-                            <div className="flex items-center space-x-4">
-                              <Button
-                                variant={userVoted[post.id] ? "default" : "ghost"}
-                                size="sm"
-                                className={userVoted[post.id] ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}
-                                onClick={() => handleUpvote(post.id)}
-                                disabled={userVoted[post.id]}
-                              >
-                                <ChevronUp className="w-4 h-4 mr-1" />
-                                {postVotes[post.id] || 0}
-                              </Button>
-                              {/* Removed Like Button */}
-                              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
-                                <MessageCircle className="w-4 h-4 mr-1" />
-                                0
-                              </Button>
-                            </div>
-                          </div>
+                          <Button
+                            variant={userVoted[post.id] ? "default" : "ghost"}
+                            size="sm"
+                            className={userVoted[post.id] ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}
+                            onClick={() => handleUpvote(post.id)}
+                            disabled={userVoted[post.id]}
+                          >
+                            <ChevronUp className="w-4 h-4 mr-1" />
+                            {postVotes[post.id] || 0}
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))
               )}
-            </div>
-
-            {/* Load More */}
-            <div className="text-center">
-              <Button variant="outline">Load More Discussions</Button>
             </div>
           </div>
         </div>
@@ -415,4 +326,4 @@ const CommunityForum: React.FC = () => {
   );
 };
 
-export default CommunityForum; 
+export default CommunityForum;

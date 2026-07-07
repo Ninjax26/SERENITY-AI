@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import type { User } from '@supabase/supabase-js';
-import Papa from 'papaparse';
+import type { User, PdfTextItem } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -71,7 +71,7 @@ const JournalInterface = () => {
           .order('created_at', { ascending: false })
           .then(({ data: rows }) => {
             if (rows) {
-              setJournalEntries(rows.map((row: any) => ({
+              setJournalEntries(rows.map((row: JournalEntryRow) => ({
                 id: row.id,
                 title: row.title,
                 content: row.content,
@@ -134,13 +134,13 @@ const JournalInterface = () => {
     if (file.type === 'text/csv') {
       Papa.parse(file, {
         complete: async (results) => {
-          const text = results.data.map((row: any) => row.join(', ')).join('\n');
+          const text = (results.data as string[][]).map((row) => row.join(', ')).join('\n');
           const newEntry = {
             id: Date.now().toString(),
             title: 'Imported CSV Entry',
             content: text,
             date: new Date(),
-            sentiment: 'neutral' as 'neutral',
+            sentiment: 'neutral' as const,
             tags: [],
             wordCount: text.split(' ').length
           };
@@ -155,7 +155,7 @@ const JournalInterface = () => {
             created_at: newEntry.date.toISOString()
           });
         },
-        error: () => alert('Failed to parse CSV file.')
+        error: () => toast({ title: "Import failed", description: "Failed to parse CSV file.", variant: "destructive" })
       });
     } else if (file.type === 'application/pdf') {
       const reader = new FileReader();
@@ -166,14 +166,14 @@ const JournalInterface = () => {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map((item: any) => item.str).join(' ') + '\n';
+          text += content.items.map((item) => (item as PdfTextItem).str).join(' ') + '\n';
         }
         const newEntry = {
           id: Date.now().toString(),
           title: 'Imported PDF Entry',
           content: text,
           date: new Date(),
-          sentiment: 'neutral' as 'neutral',
+          sentiment: 'neutral' as const,
           tags: [],
           wordCount: text.split(' ').length
         };
@@ -190,7 +190,7 @@ const JournalInterface = () => {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      alert('Unsupported file type. Please upload a PDF or CSV file.');
+      toast({ title: "Unsupported file", description: "Please upload a PDF or CSV file.", variant: "destructive" });
     }
   };
 

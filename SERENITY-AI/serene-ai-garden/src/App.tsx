@@ -2,9 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import EnvWarning from "./components/EnvWarning";
 import About from "./pages/About";
@@ -23,6 +22,7 @@ const MoodTracking = lazy(() => import("./pages/MoodTracking"));
 const SmartJournaling = lazy(() => import("./pages/SmartJournaling"));
 const WellnessInsights = lazy(() => import("./pages/WellnessInsights"));
 const MindfulnessTools = lazy(() => import("./pages/MindfulnessTools"));
+const Index = lazy(() => import("./pages/Index"));
 
 const queryClient = new QueryClient();
 

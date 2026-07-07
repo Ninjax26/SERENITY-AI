@@ -1,315 +1,184 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar, TrendingUp, Smile, Frown, Meh, Heart, Zap } from 'lucide-react';
+import { Calendar, TrendingUp, Heart, Brain, BookOpen, MessageCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useToast } from "@/hooks/use-toast";
 
-interface MoodEntry {
-  id: string;
-  mood: number;
-  emoji: string;
-  note: string;
-  date: Date;
-  factors: string[];
-}
-
-const MoodTracker = () => {
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
-  const [moodNote, setMoodNote] = useState('');
-  const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
-  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
-  const [user, setUser] = useState<any>(null);
+const DashboardOverview = () => {
+  const [moodEntries, setMoodEntries] = useState<any[]>([]);
+  const [journalEntries, setJournalEntries] = useState<any[]>([]);
+  const [chatCount, setChatCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const [submitting, setSubmitting] = useState(false);
 
-  // Fetch user and mood entries from Supabase
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    const fetchDashboardData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [moodData, journalData, chatData] = await Promise.all([
+        supabase.from('mood_entries').select('*').eq('user_id', user.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id),
+        supabase.from('chat_messages').select('*').eq('user_id', user.id)
+      ]);
+
+      setMoodEntries(moodData.data || []);
+      setJournalEntries(journalData.data || []);
+      setChatCount(chatData.data?.length || 0);
       setLoading(false);
-      if (data.user) {
-        fetchMoodEntries(data.user.id);
-      }
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchMoodEntries(session.user.id);
-      } else {
-        setMoodEntries([]);
-      }
-    });
-    return () => {
-      listener?.subscription.unsubscribe();
     };
+
+    fetchDashboardData();
   }, []);
 
-  const fetchMoodEntries = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('mood_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    if (!error && data) {
-      setMoodEntries(data.map((row: any) => ({
-        id: row.id,
-        mood: row.mood,
-        emoji: row.emoji,
-        note: row.note,
-        date: new Date(row.created_at),
-        factors: row.factors || [],
-      })));
-    } else {
-      setMoodEntries([]);
-    }
-  };
+  const averageMood = moodEntries.length > 0
+    ? (moodEntries.reduce((sum, entry) => sum + entry.mood, 0) / moodEntries.length).toFixed(1)
+    : '0.0';
 
-  const moodOptions = [
-    { value: 1, emoji: '😢', label: 'Very Sad', color: 'text-red-500' },
-    { value: 2, emoji: '🙁', label: 'Sad', color: 'text-orange-500' },
-    { value: 3, emoji: '😐', label: 'Okay', color: 'text-yellow-500' },
-    { value: 4, emoji: '😊', label: 'Good', color: 'text-green-500' },
-    { value: 5, emoji: '😄', label: 'Great', color: 'text-emerald-500' }
-  ];
+  const goodDays = moodEntries.filter(e => e.mood >= 4).length;
+  const totalWords = journalEntries.reduce((sum, entry) => sum + (entry.word_count || 0), 0);
 
-  const moodFactors = [
-    'Sleep', 'Exercise', 'Work', 'Social', 'Weather', 'Health', 'Family', 'Stress'
-  ];
-
-  const handleMoodSubmit = async () => {
-    if (selectedMood === null || !user) return;
-    setSubmitting(true);
-    const selectedMoodOption = moodOptions.find(m => m.value === selectedMood);
-    const newEntry = {
-      user_id: user.id,
-      mood: selectedMood,
-      emoji: selectedMoodOption!.emoji,
-      note: moodNote,
-      factors: selectedFactors,
-      created_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from('mood_entries').insert(newEntry);
-    setSubmitting(false);
-    if (!error) {
-      fetchMoodEntries(user.id);
-      toast({ title: "Mood entry saved!", description: "Your mood has been logged." });
-    } else {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
-    setSelectedMood(null);
-    setMoodNote('');
-    setSelectedFactors([]);
-  };
-
-  const handleClearAll = async () => {
-    if (!user) return;
-    await supabase.from('mood_entries').delete().eq('user_id', user.id);
-    setMoodEntries([]);
-  };
-
-  const averageMood = moodEntries.length > 0 
-    ? moodEntries.reduce((sum, entry) => sum + entry.mood, 0) / moodEntries.length 
-    : 0;
-
-  const toggleFactor = (factor: string) => {
-    setSelectedFactors(prev => 
-      prev.includes(factor) 
-        ? prev.filter(f => f !== factor)
-        : [...prev, factor]
-    );
-  };
+  if (loading) {
+    return <div className="text-center py-12">Loading your wellness insights...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-calm-50 via-white to-wellness-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-wellness-500 to-serenity-500 rounded-full flex items-center justify-center">
-              <Smile className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-wellness-600 to-serenity-600 bg-clip-text text-transparent dark:from-wellness-400 dark:to-serenity-400">
-              Mood Tracker
-            </h1>
-          </div>
-          <p className="text-gray-600 dark:text-gray-300">Track your emotional journey and discover patterns</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Your Wellness Journey</h2>
+        <p className="text-gray-600">Track your progress and insights over time</p>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Mood Input */}
-          <div className="lg:col-span-1">
-            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Heart className="w-5 h-5 text-wellness-500" />
-                  <span>How are you feeling today?</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Mood Selection */}
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">Select your mood:</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {moodOptions.map((mood) => (
-                      <Button
-                        key={mood.value}
-                        variant={selectedMood === mood.value ? "default" : "outline"}
-                        onClick={() => setSelectedMood(mood.value)}
-                        className={`justify-start h-12 text-left ${
-                          selectedMood === mood.value 
-                            ? 'bg-wellness-500 text-white' 
-                            : 'hover:bg-wellness-50 border-wellness-200'
-                        }`}
-                      >
-                        <span className="text-2xl mr-3">{mood.emoji}</span>
-                        <span>{mood.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-serenity-50 to-serenity-100 dark:from-serenity-900/20 dark:to-serenity-800/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-serenity-700 dark:text-serenity-300 flex items-center gap-2">
+              <Heart className="w-4 h-4" />
+              Average Mood
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-serenity-600 dark:text-serenity-400">{averageMood}/5</div>
+            <p className="text-xs text-serenity-600/60 dark:text-serenity-400/60 mt-1">Based on {moodEntries.length} entries</p>
+          </CardContent>
+        </Card>
 
-                {/* Factors */}
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">What influenced your mood?:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {moodFactors.map((factor) => (
-                      <Badge
-                        key={factor}
-                        variant={selectedFactors.includes(factor) ? "default" : "outline"}
-                        className={`cursor-pointer ${
-                          selectedFactors.includes(factor)
-                            ? 'bg-serenity-500 text-white'
-                            : 'hover:bg-serenity-50 border-serenity-200 text-serenity-700'
-                        }`}
-                        onClick={() => toggleFactor(factor)}
-                      >
-                        {factor}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+        <Card className="bg-gradient-to-br from-calm-50 to-calm-100 dark:from-calm-900/20 dark:to-calm-800/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-calm-700 dark:text-calm-300 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Good Days
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-calm-600 dark:text-calm-400">{goodDays}</div>
+            <p className="text-xs text-calm-600/60 dark:text-calm-400/60 mt-1">Days with mood ≥ 4</p>
+          </CardContent>
+        </Card>
 
-                {/* Note */}
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">Add a note (optional):</p>
-                  <Textarea
-                    value={moodNote}
-                    onChange={(e) => setMoodNote(e.target.value)}
-                    placeholder="What happened today? How are you feeling?"
-                    className="border-wellness-200 focus:border-wellness-400 focus:ring-wellness-400 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    rows={3}
-                  />
-                </div>
+        <Card className="bg-gradient-to-br from-wellness-50 to-wellness-100 dark:from-wellness-900/20 dark:to-wellness-800/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-wellness-700 dark:text-wellness-300 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Journal Entries
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-wellness-600 dark:text-wellness-400">{journalEntries.length}</div>
+            <p className="text-xs text-wellness-600/60 dark:text-wellness-400/60 mt-1">{totalWords} words written</p>
+          </CardContent>
+        </Card>
 
-                <Button
-                  onClick={handleMoodSubmit}
-                  disabled={selectedMood === null || loading || submitting}
-                  className="w-full bg-gradient-to-r from-wellness-500 to-serenity-500 hover:from-wellness-600 hover:to-serenity-600 text-white"
-                >
-                  {submitting ? "Saving..." : "Log Mood Entry"}
-                </Button>
-                <Button
-                  onClick={handleClearAll}
-                  className="w-full bg-red-500 hover:bg-red-600 text-white mt-2"
-                  disabled={loading || !user}
-                >
-                  Clear All Mood Entries
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <MessageCircle className="w-4 h-4" />
+              AI Conversations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{chatCount}</div>
+            <p className="text-xs text-blue-600/60 dark:text-blue-400/60 mt-1">Messages exchanged</p>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Mood History & Analytics */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Analytics */}
-            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.2s'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-serenity-500" />
-                  <span>Your Mood Insights</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-wellness-600 dark:text-wellness-400 mb-1">
-                      {averageMood.toFixed(1)}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Average Mood</p>
-                    <div className="text-2xl mt-2">
-                      {averageMood >= 4 ? '😊' : averageMood >= 3 ? '😐' : '🙁'}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-serenity-600 dark:text-serenity-400 mb-1">
-                      {moodEntries.length}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Days Tracked</p>
-                    <div className="text-2xl mt-2">📅</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-calm-600 dark:text-calm-400 mb-1">
-                      {moodEntries.filter(e => e.mood >= 4).length}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Good Days</p>
-                    <div className="text-2xl mt-2">✨</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Entries */}
-            <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.4s'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-calm-500" />
-                  <span>Recent Entries</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {moodEntries.map((entry) => (
-                    <div key={entry.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <div className="flex items-start space-x-3">
-                        <div className="text-3xl">{entry.emoji}</div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-800 dark:text-white">
-                              {moodOptions.find(m => m.value === entry.mood)?.label}
-                            </span>
-                            <span className="text-sm text-gray-500 dark:text-gray-300">
-                              {entry.date.toLocaleDateString()}
-                            </span>
-                          </div>
-                          {entry.note && (
-                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{entry.note}</p>
-                          )}
-                          {entry.factors.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {entry.factors.map((factor) => (
-                                <Badge key={factor} variant="secondary" className="text-xs dark:bg-gray-800 dark:text-white">
-                                  {factor}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Mood Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {moodEntries.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Start tracking your mood to see trends</p>
+            ) : (
+              <div className="space-y-3">
+                {moodEntries.slice(0, 5).map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{entry.emoji}</span>
+                      <div>
+                        <p className="font-medium text-sm">{entry.note || "No note"}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(entry.created_at).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-serenity-600">{entry.mood}/5</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5" />
+              Recent Journal Entries
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {journalEntries.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Start journaling to see your entries here</p>
+            ) : (
+              <div className="space-y-3">
+                {journalEntries.slice(0, 5).map((entry) => (
+                  <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h4 className="font-medium text-sm mb-1">{entry.title}</h4>
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {entry.content?.substring(0, 100)}...
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {new Date(entry.created_at).toLocaleDateString()} • {entry.word_count} words
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="bg-gradient-to-r from-serenity-500/10 to-calm-500/10 dark:from-serenity-500/20 dark:to-calm-500/20">
+        <CardHeader>
+          <CardTitle className="text-serenity-700 dark:text-serenity-300">Wellness Tips</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <li>• Try to maintain a consistent sleep schedule for better mood stability</li>
+            <li>• Regular journaling can help process emotions and reduce stress</li>
+            <li>• Taking breaks for mindfulness exercises can improve focus</li>
+            <li>• Talking to your AI companion about your feelings can provide perspective</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default MoodTracker;
+export default DashboardOverview;

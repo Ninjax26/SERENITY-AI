@@ -22,6 +22,7 @@ import {
 import { supabase } from "../supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, PostVoteRow, PostLikeRow } from "@/lib/types";
+import Navigation from '../components/Navigation';
 
 interface Post {
   id: string;
@@ -62,7 +63,8 @@ const CommunityForum: React.FC = () => {
       setAuthLoading(false);
       fetchPosts(id);
     });
-  }, [fetchPosts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchPosts = useCallback(async (currentUserId: string | null) => {
     try {
@@ -138,45 +140,9 @@ const CommunityForum: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="bg-card dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-foreground dark:text-gray-100">Community Support Forum</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input placeholder="Search discussions..." className="pl-10 w-64" />
-              </div>
-              {user ? (
-                <div className="flex items-center space-x-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg?height=32&width=32"} />
-                    <AvatarFallback>
-                      {user.user_metadata?.name
-                        ? user.user_metadata.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()
-                        : "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user.user_metadata?.name && (
-                    <span className="ml-1 font-medium text-foreground dark:text-gray-100">{user.user_metadata.name}</span>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={async () => await supabase.auth.signInWithOAuth({ provider: 'google' })}
-                >
-                  Sign In
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
+      <Navigation />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold mb-6">Community Support Forum</h1>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
             <Card>

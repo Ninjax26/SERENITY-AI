@@ -4,7 +4,7 @@ import ReplyForm from "./ReplyForm";
 
 interface PostItemProps {
   post: {
-    id: number;
+    id: string;
     content: string;
     author: string;
     created_at: string;

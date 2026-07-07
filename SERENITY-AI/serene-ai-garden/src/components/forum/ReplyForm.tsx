@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { supabase } from "../../supabaseClient";
 
 interface ReplyFormProps {
-  postId: number;
+  postId: string;
+  parentId?: string | null;
 }
 
-const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
+const ReplyForm: React.FC<ReplyFormProps> = ({ postId, parentId = null }) => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,6 +15,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({ postId }) => {
     setLoading(true);
     const { error } = await supabase.from("replies").insert({
       post_id: postId,
+      parent_id: parentId,
       content,
       author: "Anonymous",
     });

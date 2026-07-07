@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabaseService } from "../../supabaseClient";
-import type { User } from "../../supabaseClient";
+import type { User } from "@supabase/supabase-js";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const postSchema = z.object({
@@ -59,6 +59,7 @@ const PostForm: React.FC = () => {
         title: data.title,
         content: data.content,
         author: user.user_metadata?.name || "Anonymous",
+        user_id: user.id,
       };
 
       await supabaseService.createPost(post);

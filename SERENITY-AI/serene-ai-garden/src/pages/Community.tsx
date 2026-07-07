@@ -82,6 +82,7 @@ const CommunityForum: React.FC = () => {
         const { data: votes, error: votesError } = await supabase
           .from('post_votes')
           .select('post_id, user_id');
+        if (votesError) throw votesError;
         console.log('Fetched votes:', votes, 'Error:', votesError);
         const voteCounts: Record<string, number> = {};
         const voted: Record<string, boolean> = {};
@@ -95,6 +96,7 @@ const CommunityForum: React.FC = () => {
         const { data: likes, error: likesError } = await supabase
           .from('post_likes')
           .select('post_id, user_id');
+        if (likesError) throw likesError;
         console.log('Fetched likes:', likes, 'Error:', likesError);
         const likeCounts: Record<string, number> = {};
         const liked: Record<string, boolean> = {};
@@ -120,6 +122,10 @@ const CommunityForum: React.FC = () => {
 
   const handlePost = async () => {
     if (!title.trim() || !content.trim()) return;
+    if (!userId) {
+      setError("Please sign in to post.");
+      return;
+    }
     setPosting(true);
     setError(null);
     try {
@@ -130,10 +136,11 @@ const CommunityForum: React.FC = () => {
         author: user?.user_metadata?.name || "Anonymous",
         user_id: userId,
       });
+      if (error) throw error;
       console.log('Post insert result:', data, error);
       setTitle("");
       setContent("");
-      fetchPosts();
+      await fetchPosts();
     } catch (err) {
       setError("Failed to create post. Please try again.");
       console.error("Post creation error:", err);
@@ -148,8 +155,9 @@ const CommunityForum: React.FC = () => {
     try {
       console.log('Upvoting post:', postId, 'by user:', userId);
       const { data, error } = await supabase.from('post_votes').insert({ post_id: postId, user_id: userId });
+      if (error) throw error;
       console.log('Upvote result:', data, error);
-      fetchPosts();
+      await fetchPosts();
     } catch (err) {
       alert('Error upvoting post');
       console.error('Upvote error:', err);
@@ -162,8 +170,9 @@ const CommunityForum: React.FC = () => {
     try {
       console.log('Liking post:', postId, 'by user:', userId);
       const { data, error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
+      if (error) throw error;
       console.log('Like result:', data, error);
-      fetchPosts();
+      await fetchPosts();
     } catch (err) {
       alert('Error liking post');
       console.error('Like error:', err);

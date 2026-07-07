@@ -2,8 +2,8 @@ import React from "react";
 
 interface ReplyItemProps {
   reply: {
-    id: number;
-    post_id: number;
+    id: string;
+    post_id: string;
     content: string;
     author: string;
     created_at: string;

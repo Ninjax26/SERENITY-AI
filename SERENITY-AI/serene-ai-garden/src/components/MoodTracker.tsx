@@ -84,32 +84,48 @@ const MoodTracker = () => {
   const handleMoodSubmit = async () => {
     if (selectedMood === null || !user) return;
     setSubmitting(true);
-    const selectedMoodOption = moodOptions.find(m => m.value === selectedMood);
-    const newEntry = {
-      user_id: user.id,
-      mood: selectedMood,
-      emoji: selectedMoodOption!.emoji,
-      note: moodNote,
-      factors: selectedFactors,
-      created_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from('mood_entries').insert(newEntry);
-    setSubmitting(false);
-    if (!error) {
-      fetchMoodEntries(user.id);
+    try {
+      const selectedMoodOption = moodOptions.find(m => m.value === selectedMood);
+      if (!selectedMoodOption) {
+        throw new Error("Please select a mood before saving.");
+      }
+
+      const newEntry = {
+        user_id: user.id,
+        mood: selectedMood,
+        emoji: selectedMoodOption.emoji,
+        note: moodNote,
+        factors: selectedFactors,
+        created_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from('mood_entries').insert(newEntry);
+      if (error) throw error;
+
+      await fetchMoodEntries(user.id);
+      setSelectedMood(null);
+      setMoodNote('');
+      setSelectedFactors([]);
       toast({ title: "Mood entry saved!", description: "Your mood has been logged." });
-    } else {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to save mood entry.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
-    setSelectedMood(null);
-    setMoodNote('');
-    setSelectedFactors([]);
   };
 
   const handleClearAll = async () => {
     if (!user) return;
-    await supabase.from('mood_entries').delete().eq('user_id', user.id);
-    setMoodEntries([]);
+    const { error } = await supabase.from('mood_entries').delete().eq('user_id', user.id);
+    if (!error) {
+      setMoodEntries([]);
+    } else {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
   const averageMood = moodEntries.length > 0 

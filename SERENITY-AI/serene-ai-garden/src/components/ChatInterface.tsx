@@ -111,19 +111,18 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage]);
     setNewMessage('');
     setIsTyping(true);
-    // Save to Supabase
-    const { error: insertError } = await supabase.from('chat_messages').insert({
-      user_id: user.id,
-      content: userMessage.content,
-      sender: userMessage.sender,
-      created_at: userMessage.timestamp.toISOString(),
-      emotion: userMessage.emotion || null
-    });
-    if (insertError) {
-      setError('Failed to save message. Please try again.');
-    }
 
     try {
+      // Save the user message first so the persisted thread stays consistent.
+      const { error: insertError } = await supabase.from('chat_messages').insert({
+        user_id: user.id,
+        content: userMessage.content,
+        sender: userMessage.sender,
+        created_at: userMessage.timestamp.toISOString(),
+        emotion: userMessage.emotion || null
+      });
+      if (insertError) throw insertError;
+
       // Conversation context: last 6 messages
       const contextMessages = [...messages, userMessage].slice(-6).map(m => ({
         role: m.sender,
@@ -149,15 +148,17 @@ const ChatInterface = () => {
         timestamp: new Date(),
         emotion: mood || 'supportive'
       };
-      setMessages(prev => [...prev, aiMessage]);
       // Save AI message to Supabase
-      await supabase.from('chat_messages').insert({
+      const { error: aiInsertError } = await supabase.from('chat_messages').insert({
         user_id: user.id,
         content: aiMessage.content,
         sender: aiMessage.sender,
         created_at: aiMessage.timestamp.toISOString(),
         emotion: aiMessage.emotion
       });
+      if (aiInsertError) throw aiInsertError;
+
+      setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
       console.error('Gemini API error:', err);
       setMessages(prev => [...prev, {

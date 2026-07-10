@@ -5,7 +5,7 @@ import DashboardOverview from '../components/DashboardOverview';
 import Navigation from '../components/Navigation';
 
 const WellnessInsights = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<import('@supabase/supabase-js').User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

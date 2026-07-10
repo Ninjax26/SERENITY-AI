@@ -44,7 +44,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
     { id: 'dashboard', label: 'Insights', icon: BarChart3, path: '/wellnessinsights' },
   ];
 
-  const handleNavClick = (item: any) => {
+  const handleNavClick = (item: { id: string; label: string; icon: React.ComponentType; path: string }) => {
     if (onViewChange) {
       // Use custom view state if provided (for Index page)
       onViewChange(item.id);
@@ -54,7 +54,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
     }
   };
 
-  const isActive = (item: any) => {
+  const isActive = (item: { id: string; path: string }) => {
     if (onViewChange && currentView) {
       return currentView === item.id;
     }

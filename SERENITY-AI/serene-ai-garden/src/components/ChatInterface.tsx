@@ -11,6 +11,7 @@ import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
 import { toast } from "@/hooks/use-toast";
+import { SpeechRecognitionEvent } from "@/lib/types";
 
 interface Message {
   id: string;
@@ -36,7 +37,7 @@ const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loginWarning, setLoginWarning] = useState<string | null>(null);
 
@@ -61,7 +62,7 @@ const ChatInterface = () => {
             if (error) {
               setError('Failed to load chat messages.');
             } else if (rows) {
-              setMessages(rows.map((row: any) => ({
+              setMessages(rows.map((row: { id: string; content: string; sender: 'user' | 'ai'; created_at: string; emotion?: string }) => ({
                 id: row.id,
                 content: row.content,
                 sender: row.sender,
@@ -81,12 +82,12 @@ const ChatInterface = () => {
   // Voice recognition setup
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition: typeof SpeechRecognition; webkitSpeechRecognition: typeof SpeechRecognition }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = false;
     recognitionRef.current.lang = 'en-US';
-    recognitionRef.current.onresult = (event: any) => {
+    recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setNewMessage(transcript);
       setIsListening(false);
@@ -215,11 +216,11 @@ const ChatInterface = () => {
     if (file.type === 'text/csv') {
       Papa.parse(file, {
         complete: async (results) => {
-          const text = results.data.map((row: any) => row.join(', ')).join('\n');
+          const text = (results.data as string[][]).map(row => row.join(', ')).join('\n');
           const importedMsg = {
             id: Date.now().toString(),
             content: text,
-            sender: 'user' as 'user',
+            sender: 'user' as const,
             timestamp: new Date(),
             emotion: undefined
           };
@@ -243,12 +244,12 @@ const ChatInterface = () => {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map((item: any) => item.str).join(' ') + '\n';
+          text += content.items.map((item: { str: string }) => item.str).join(' ') + '\n';
         }
         const importedMsg = {
           id: Date.now().toString(),
           content: text,
-          sender: 'user' as 'user',
+            sender: 'user' as const,
           timestamp: new Date(),
           emotion: undefined
         };

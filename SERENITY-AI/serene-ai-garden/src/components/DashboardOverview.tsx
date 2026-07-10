@@ -4,8 +4,8 @@ import { Calendar, TrendingUp, Heart, Brain, BookOpen, MessageCircle } from 'luc
 import { supabase } from '../supabaseClient';
 
 const DashboardOverview = () => {
-  const [moodEntries, setMoodEntries] = useState<any[]>([]);
-  const [journalEntries, setJournalEntries] = useState<any[]>([]);
+  const [moodEntries, setMoodEntries] = useState<{ mood: number }[]>([]);
+  const [journalEntries, setJournalEntries] = useState<{ word_count?: number }[]>([]);
   const [chatCount, setChatCount] = useState(0);
   const [loading, setLoading] = useState(true);
 

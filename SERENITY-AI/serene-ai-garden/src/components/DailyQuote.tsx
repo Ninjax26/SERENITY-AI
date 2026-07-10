@@ -6,7 +6,7 @@ const fallbackQuote = {
 };
 
 const DailyQuote = () => {
-  const [quote, setQuote] = useState<any>(null);
+  const [quote, setQuote] = useState<{ content: string; author: string } | null>(null);
 
   useEffect(() => {
     fetch('https://api.quotable.io/random')

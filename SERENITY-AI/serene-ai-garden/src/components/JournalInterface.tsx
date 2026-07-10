@@ -69,6 +69,7 @@ const JournalInterface = () => {
           .select('*')
           .eq('user_id', data.user.id)
           .order('created_at', { ascending: false })
+          .limit(100)
           .then(({ data: rows }) => {
             if (rows) {
               setJournalEntries(rows.map((row: JournalEntryRow) => ({

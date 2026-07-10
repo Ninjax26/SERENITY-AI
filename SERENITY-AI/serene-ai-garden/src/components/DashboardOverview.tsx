@@ -15,9 +15,9 @@ const DashboardOverview = () => {
       if (!user) return;
 
       const [moodData, journalData, chatData] = await Promise.all([
-        supabase.from('mood_entries').select('*').eq('user_id', user.id),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id),
-        supabase.from('chat_messages').select('*').eq('user_id', user.id)
+        supabase.from('mood_entries').select('*').eq('user_id', user.id).limit(200),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).limit(200),
+        supabase.from('chat_messages').select('*').eq('user_id', user.id).limit(200)
       ]);
 
       setMoodEntries(moodData.data || []);

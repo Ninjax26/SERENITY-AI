@@ -56,6 +56,7 @@ const ChatInterface = () => {
           .select('*')
           .eq('user_id', data.user.id)
           .order('created_at', { ascending: true })
+          .limit(100)
           .then(({ data: rows, error }) => {
             if (error) {
               setError('Failed to load chat messages.');
@@ -190,7 +191,7 @@ const ChatInterface = () => {
 
   const handleSpeakAI = () => {
     if (!('speechSynthesis' in window)) {
-      alert('Speech synthesis is not supported in this browser.');
+      toast({ title: "Not supported", description: "Speech synthesis is not supported in this browser.", variant: "destructive" });
       return;
     }
     const lastAI = [...messages].reverse().find(m => m.sender === 'ai');

@@ -55,7 +55,8 @@ const MoodTracker = () => {
       .from('mood_entries')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (!error && data) {
       setMoodEntries(data.map((row: MoodEntryRow) => ({
         id: row.id,

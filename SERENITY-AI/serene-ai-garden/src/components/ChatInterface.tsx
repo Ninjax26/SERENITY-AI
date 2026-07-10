@@ -10,6 +10,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
+import { toast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -128,19 +129,12 @@ const ChatInterface = () => {
         role: m.sender,
         content: m.content
       }));
-      console.log('Context for Gemini:', contextMessages);
-      // Mood detection
-      console.log('Detecting mood for:', userMessage.content);
       const mood = await detectMood(userMessage.content);
-      console.log('Detected mood:', mood);
-      // Gemini API call
-      console.log('Calling Gemini with:', { userMessage: userMessage.content, contextMessages, mood });
       const aiText = await getGeminiAIResponse({
         userMessage: userMessage.content,
         contextMessages,
         mood
       });
-      console.log('Gemini response:', aiText);
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: aiText,
@@ -182,7 +176,7 @@ const ChatInterface = () => {
 
   const handleVoiceInput = () => {
     if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in this browser.');
+      toast({ title: "Not supported", description: "Speech recognition is not supported in this browser.", variant: "destructive" });
       return;
     }
     if (isListening) {
@@ -212,6 +206,11 @@ const ChatInterface = () => {
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File too large", description: "Please upload files under 10 MB.", variant: "destructive" });
+      return;
+    }
     if (file.type === 'text/csv') {
       Papa.parse(file, {
         complete: async (results) => {
@@ -232,7 +231,7 @@ const ChatInterface = () => {
             emotion: importedMsg.emotion || null
           });
         },
-        error: () => alert('Failed to parse CSV file.')
+        error: () => toast({ title: "Import failed", description: "Failed to parse CSV file.", variant: "destructive" })
       });
     } else if (file.type === 'application/pdf') {
       const reader = new FileReader();
@@ -263,7 +262,7 @@ const ChatInterface = () => {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      alert('Unsupported file type. Please upload a PDF or CSV file.');
+      toast({ title: "Unsupported file", description: "Please upload a PDF or CSV file.", variant: "destructive" });
     }
   };
 

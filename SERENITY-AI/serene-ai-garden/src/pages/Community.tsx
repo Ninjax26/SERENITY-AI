@@ -72,7 +72,8 @@ const CommunityForum: React.FC = () => {
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (postsError) throw postsError;
       setPosts(postsData || []);
 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag, Trash2 } from 'lucide-react';
+import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag, Trash2, Download, Upload, Feather } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import type { User, PdfTextItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -307,55 +307,46 @@ const JournalInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-calm-50 via-white to-wellness-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 p-4">
-      <div className="max-w-6xl mx-auto">
+    <main className="min-h-screen bg-[#f5f3ef] pb-16 text-slate-900 dark:bg-slate-950 dark:text-white">
+      <header className="border-b border-amber-950/10 bg-[#44382f] text-white">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-9 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-end lg:px-8"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Private journal</p><h1 className="mt-3 font-serif text-4xl font-bold tracking-tight sm:text-5xl">A page for what is still unfolding.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/65 sm:text-base">Write freely, return when you are ready, and let small reflections become a clearer story.</p></div><div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/10 p-2"><div className="px-3 py-2 text-center"><p className="font-serif text-2xl font-bold">{journalEntries.length}</p><p className="text-[10px] uppercase text-white/50">entries</p></div><div className="px-3 py-2 text-center"><p className="font-serif text-2xl font-bold">{journalEntries.reduce((sum, entry) => sum + entry.wordCount, 0)}</p><p className="text-[10px] uppercase text-white/50">words</p></div><div className="px-3 py-2 text-center"><p className="font-serif text-2xl font-bold">{currentStreak}</p><p className="text-[10px] uppercase text-white/50">day streak</p></div></div></div>
+      </header>
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 lg:px-8">
         <DailyQuote />
         <Tabs defaultValue="journal" className="w-full">
-          <TabsList className="mb-6 w-full grid grid-cols-2">
+          <TabsList className="mx-auto mb-6 grid w-full max-w-md grid-cols-2 rounded-full bg-white p-1 shadow-sm dark:bg-slate-900">
             <TabsTrigger value="journal">Journal</TabsTrigger>
             <TabsTrigger value="forum">Forum</TabsTrigger>
           </TabsList>
           <TabsContent value="journal">
             {/* Export Buttons */}
-            <div className="flex justify-end gap-2 mb-2">
-              <Button variant="outline" size="sm" onClick={exportJournalAsCSV} disabled={!journalEntries.length}>Export as CSV</Button>
-              <Button variant="outline" size="sm" onClick={exportJournalAsPDF} disabled={!journalEntries.length}>Export as PDF</Button>
+            <div className="mb-3 flex flex-wrap justify-end gap-2">
+              <Button variant="outline" className="rounded-full bg-white dark:bg-slate-900" size="sm" onClick={exportJournalAsCSV} disabled={!journalEntries.length}><Download className="mr-2 h-3.5 w-3.5" />CSV</Button>
+              <Button variant="outline" className="rounded-full bg-white dark:bg-slate-900" size="sm" onClick={exportJournalAsPDF} disabled={!journalEntries.length}><Download className="mr-2 h-3.5 w-3.5" />PDF</Button>
             </div>
-            {/* Header */}
-            <div className="text-center mb-8 animate-fade-in">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-calm-500 to-wellness-500 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-calm-600 to-wellness-600 bg-clip-text text-transparent dark:from-calm-400 dark:to-wellness-400">
-                  Smart Journal
-                </h1>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300">Express yourself with AI-powered writing prompts and insights</p>
-            </div>
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
               {/* Writing Area */}
               <div className="lg:col-span-2">
-                <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700">
+                <Card className="overflow-hidden rounded-[1.75rem] border-amber-900/10 bg-white shadow-xl shadow-amber-950/5 animate-fade-in dark:border-slate-800 dark:bg-slate-900">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
-                      <Sparkles className="w-5 h-5 text-calm-500" />
-                      <span>New Journal Entry</span>
+                      <Feather className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+                      <span>New reflection</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* AI Prompt */}
-                    <div className="bg-gradient-to-r from-calm-50 to-wellness-50 border border-calm-200 rounded-lg p-4 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700">
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/30">
                       <div className="flex items-center space-x-2 mb-2">
                         <Lightbulb className="w-4 h-4 text-calm-600" />
                         <span className="text-sm font-medium text-calm-700 dark:text-calm-200">Writing Prompt</span>
                       </div>
-                      <p className="text-calm-800 dark:text-calm-100 italic mb-3">"{currentPrompt}"</p>
+                      <p className="font-serif text-lg text-amber-950 dark:text-amber-100 italic mb-3">“{currentPrompt}”</p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentPrompt(writingPrompts[Math.floor(Math.random() * writingPrompts.length)])}
-                        className="text-calm-600 border-calm-300 hover:bg-calm-50 dark:text-calm-200 dark:border-calm-600 dark:hover:bg-gray-800"
+                        className="rounded-full border-amber-200 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200"
                       >
                         New Prompt
                       </Button>
@@ -369,7 +360,7 @@ const JournalInterface = () => {
                         onChange={(e) => setCurrentTitle(e.target.value)}
                         maxLength={180}
                         placeholder="Give your entry a title..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-calm-400 focus:ring-calm-400 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                        className="w-full border-0 border-b border-slate-200 bg-transparent px-1 py-3 font-serif text-xl outline-none focus:border-amber-500 dark:border-slate-700"
                       />
                     </div>
                     {/* Writing Area */}
@@ -380,7 +371,7 @@ const JournalInterface = () => {
                         onChange={(e) => setCurrentEntry(e.target.value)}
                         maxLength={10000}
                         placeholder="Start writing your thoughts here..."
-                        className="min-h-64 border-calm-200 focus:border-calm-400 focus:ring-calm-400 resize-none bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                        className="min-h-80 resize-y rounded-2xl border-slate-200 bg-[#fdfcf9] p-5 text-base leading-7 dark:border-slate-700 dark:bg-slate-950"
                       />
                       <div className="mb-3 mt-2 flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-300">
                         <span>{currentEntry.split(' ').filter(word => word.length > 0).length} words</span>
@@ -390,12 +381,12 @@ const JournalInterface = () => {
                       <Button
                         onClick={handleSaveEntry}
                         disabled={!currentEntry.trim()}
-                        className="bg-gradient-to-r from-calm-500 to-wellness-500 hover:from-calm-600 hover:to-wellness-600 text-white"
+                        className="rounded-full bg-amber-800 px-6 text-white hover:bg-amber-900"
                       >
                         Save Entry
                       </Button>
-                      <label className="ml-2 cursor-pointer bg-gray-100 border border-gray-200 px-3 py-2 rounded-md text-xs text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
-                        Import PDF/CSV
+                      <label className="ml-2 inline-flex cursor-pointer items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <Upload className="mr-2 h-3.5 w-3.5" />Import
                         <input type="file" accept=".csv,application/pdf" onChange={handleFileImport} style={{ display: 'none' }} />
                       </label>
                     </div>
@@ -404,7 +395,7 @@ const JournalInterface = () => {
               </div>
               {/* Journal History */}
               <div className="lg:col-span-1">
-                <Card className="wellness-card animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.2s'}}>
+                <Card className="rounded-[1.75rem] border-slate-200 bg-white shadow-sm animate-fade-in dark:border-slate-800 dark:bg-slate-900" style={{animationDelay: '0.2s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Calendar className="w-5 h-5 text-wellness-500" />
@@ -417,7 +408,7 @@ const JournalInterface = () => {
                         <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No saved entries yet.</p>
                       )}
                       {journalEntries.map((entry) => (
-                        <button type="button" key={entry.id} onClick={() => setSelectedEntry(entry)} className="w-full border border-gray-200 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer dark:border-gray-700 text-left">
+                        <button type="button" key={entry.id} onClick={() => setSelectedEntry(entry)} className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/40 hover:shadow-sm dark:border-slate-700 dark:hover:bg-slate-800">
                           <div className="flex items-start justify-between mb-2">
                             <h3 className="font-medium text-gray-800 dark:text-white truncate">{entry.title}</h3>
                             <Badge className={`text-xs ${getSentimentColor(entry.sentiment)}`}>{getSentimentEmoji(entry.sentiment)}</Badge>
@@ -438,7 +429,7 @@ const JournalInterface = () => {
                   </CardContent>
                 </Card>
                 {/* Writing Stats */}
-                <Card className="wellness-card mt-6 animate-fade-in dark:bg-gray-900 dark:text-white dark:border-gray-700" style={{animationDelay: '0.4s'}}>
+                <Card className="mt-5 rounded-[1.75rem] border-slate-200 bg-[#44382f] text-white shadow-sm animate-fade-in dark:border-slate-800" style={{animationDelay: '0.4s'}}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Tag className="w-5 h-5 text-serenity-500" />
@@ -449,19 +440,19 @@ const JournalInterface = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-wellness-600 mb-1">{journalEntries.length}</div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">Total Entries</p>
+                        <p className="text-xs text-white/55">Total Entries</p>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-calm-600 mb-1">{journalEntries.reduce((sum, entry) => sum + entry.wordCount, 0)}</div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">Words Written</p>
+                        <p className="text-xs text-white/55">Words Written</p>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-serenity-600 mb-1">{journalEntries.filter(e => e.sentiment === 'positive').length}</div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">Positive Days</p>
+                        <p className="text-xs text-white/55">Positive Days</p>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-wellness-600 mb-1">{currentStreak}</div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">Day Streak</p>
+                        <p className="text-xs text-white/55">Day Streak</p>
                       </div>
                     </div>
                   </CardContent>
@@ -494,7 +485,7 @@ const JournalInterface = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </main>
   );
 };
 

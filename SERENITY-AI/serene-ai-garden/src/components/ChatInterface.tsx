@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Heart, Sparkles, Smile, MessageCircle, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Send, Heart, Sparkles, MessageCircle, Mic, MicOff, Volume2, Download, Upload, Bot } from 'lucide-react';
 import { getGeminiAIResponse, detectMood } from "../aii";
 import Papa from 'papaparse';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -334,11 +334,17 @@ const ChatInterface = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen bg-[#f3f7f5] pb-14 text-foreground dark:bg-slate-950">
+      <header className="border-b border-emerald-950/10 bg-[#173f36] text-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:flex-row lg:items-end lg:justify-between">
+          <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">AI companion</p><h1 className="mt-3 font-serif text-4xl font-bold tracking-tight sm:text-5xl">A calm place to talk things through.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-50/70 sm:text-base">Share what is on your mind. Serenity responds with reflection and general support, not diagnosis.</p></div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3"><span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-emerald-300/20"><Bot className="h-5 w-5 text-emerald-200" /><span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#285047] bg-emerald-300" /></span><div><p className="text-sm font-bold">Serenity is ready</p><p className="text-xs text-white/55">{messages.length} messages in this conversation</p></div></div>
+        </div>
+      </header>
+      <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6">
         {/* Error and Login Warning */}
         {loginWarning && (
-          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
             {loginWarning}
           </div>
         )}
@@ -348,34 +354,18 @@ const ChatInterface = () => {
           </div>
         )}
         {/* Export Buttons */}
-        <div className="flex justify-end gap-2 mb-2">
-          <Button variant="outline" size="sm" onClick={exportChatAsCSV}>Export as CSV</Button>
-          <Button variant="outline" size="sm" onClick={exportChatAsPDF}>Export as PDF</Button>
-        </div>
-        {/* Header */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-serenity-500 to-calm-500 rounded-full flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-serenity-600 to-calm-600 bg-clip-text text-transparent">
-              AI Companion
-            </h1>
-          </div>
-          <p className="text-muted-foreground">Your safe space for emotional support and meaningful conversations</p>
-          <Badge className="mt-2 bg-wellness-100 text-wellness-700 border-wellness-200">
-            <Sparkles className="w-4 h-4 mr-1" />
-            Saved to your account
-          </Badge>
+        <div className="mb-3 flex flex-wrap justify-end gap-2">
+          <Button variant="outline" size="sm" className="rounded-full bg-white dark:bg-slate-900" onClick={exportChatAsCSV}><Download className="mr-2 h-3.5 w-3.5" />CSV</Button>
+          <Button variant="outline" size="sm" className="rounded-full bg-white dark:bg-slate-900" onClick={exportChatAsPDF}><Download className="mr-2 h-3.5 w-3.5" />PDF</Button>
         </div>
 
         {/* Chat Container */}
-        <Card className="wellness-card shadow-2xl animate-fade-in" style={{animationDelay: '0.2s'}}>
-          <CardHeader className="border-b border-gray-100">
+        <Card className="overflow-hidden rounded-[1.75rem] border-slate-200 bg-white shadow-xl shadow-emerald-950/5 animate-fade-in dark:border-slate-800 dark:bg-slate-900" style={{animationDelay: '0.2s'}}>
+          <CardHeader className="border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-wellness-400 rounded-full animate-pulse-gentle"></div>
-                <span className="text-sm text-gray-500">AI Companion is online</span>
+                <Heart className="h-4 w-4 text-rose-400" />
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">This conversation</span>
               </div>
               <Badge variant="secondary" className="bg-serenity-100 text-serenity-700">
                 <MessageCircle className="w-3 h-3 mr-1" />
@@ -386,17 +376,17 @@ const ChatInterface = () => {
 
           <CardContent className="p-0">
             {/* Messages */}
-            <div className="h-96 overflow-y-auto p-6 space-y-4">
+            <div className="h-[52vh] min-h-96 overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,rgba(209,238,226,.42),transparent_45%)] p-4 space-y-5 sm:p-7 dark:bg-none">
               {messages.map((message) => (
                 <div
                   key={message.id}
                   className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                    className={`max-w-[85%] px-4 py-3 shadow-sm sm:max-w-[72%] ${
                       message.sender === 'user'
-                        ? 'bg-gradient-to-r from-serenity-500 to-calm-500 text-white'
-                        : 'bg-gray-100 text-gray-800 border border-gray-200'
+                        ? 'rounded-[1.25rem_1.25rem_.35rem_1.25rem] bg-[#176b57] text-white'
+                        : 'rounded-[1.25rem_1.25rem_1.25rem_.35rem] border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
@@ -424,16 +414,16 @@ const ChatInterface = () => {
             </div>
 
             {/* Quick Replies */}
-            <div className="px-6 py-4 border-t border-gray-100">
-              <p className="text-sm text-gray-500 mb-3">Quick responses:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-6">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">A place to begin</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {quickReplies.map((reply, index) => (
                   <Button
                     key={index}
                     variant="outline"
                     size="sm"
                     onClick={() => setNewMessage(reply)}
-                    className="text-xs hover:bg-serenity-50 border-serenity-200 text-serenity-700"
+                    className="shrink-0 rounded-full border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-300"
                   >
                     {reply}
                   </Button>
@@ -442,14 +432,14 @@ const ChatInterface = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-6 border-t border-gray-100">
+            <div className="border-t border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-6">
               {/* Voice Chat Section */}
-              <div className="flex items-center mb-3 gap-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   onClick={handleVoiceInput}
                   variant={isListening ? 'destructive' : 'outline'}
-                  className={isListening ? 'animate-pulse' : ''}
+                  size="sm" className={`rounded-full ${isListening ? 'animate-pulse' : ''}`}
                 >
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   <span className="ml-2">{isListening ? 'Stop Listening' : 'Voice Input'}</span>
@@ -458,7 +448,7 @@ const ChatInterface = () => {
                   type="button"
                   onClick={handleSpeakAI}
                   variant={isSpeaking ? 'secondary' : 'outline'}
-                  className={isSpeaking ? 'animate-pulse' : ''}
+                  size="sm" className={`rounded-full ${isSpeaking ? 'animate-pulse' : ''}`}
                   disabled={isSpeaking}
                 >
                   <Volume2 className="w-4 h-4" />
@@ -470,23 +460,24 @@ const ChatInterface = () => {
                   </span>
                 )}
               </div>
-              <div className="flex space-x-2">
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-emerald-400 dark:border-slate-700 dark:bg-slate-900">
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder="Share what's on your mind..."
-                  className="flex-1 border-serenity-200 focus:border-serenity-400 focus:ring-serenity-400"
+                  maxLength={4000}
+                  className="min-w-0 flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || isTyping}
-                  className="bg-gradient-to-r from-serenity-500 to-calm-500 hover:from-serenity-600 hover:to-calm-600 text-white px-6"
+                  className="h-10 w-10 shrink-0 rounded-xl bg-emerald-700 p-0 text-white hover:bg-emerald-800"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
-                <label className="ml-2 cursor-pointer bg-gray-100 border border-gray-200 px-3 py-2 rounded-md text-xs text-gray-700 hover:bg-gray-200">
-                  Import PDF/CSV
+                <label className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-emerald-700 dark:border-slate-700 dark:hover:bg-slate-800" title="Import PDF or CSV">
+                  <Upload className="h-4 w-4" /><span className="sr-only">Import PDF/CSV</span>
                   <input type="file" accept=".csv,application/pdf" onChange={handleFileImport} style={{ display: 'none' }} />
                 </label>
               </div>
@@ -498,7 +489,7 @@ const ChatInterface = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 };
 

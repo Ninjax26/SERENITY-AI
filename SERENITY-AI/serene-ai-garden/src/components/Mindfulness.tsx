@@ -18,63 +18,74 @@ import PasswordGame from './serenity-game/src/SERENITY-AI/PasswordGame';
 import LifeStats from './serenity-game/src/SERENITY-AI/LifeStats';
 import { Progress } from "@/components/ui/progress";
 
+interface MeditationTechnique {
+  name: string;
+  duration: string;
+  steps: string[];
+}
+
+const MeditationTimer = ({ technique }: { technique: MeditationTechnique }) => {
+  const suggestedMinutes = Math.max(1, Number.parseInt(technique.duration, 10) || 5);
+  const [minutes, setMinutes] = useState(suggestedMinutes);
+  const [timeLeft, setTimeLeft] = useState(suggestedMinutes * 60);
+  const [running, setRunning] = useState(false);
+  const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    setMinutes(suggestedMinutes);
+    setTimeLeft(suggestedMinutes * 60);
+    setRunning(false);
+    setComplete(false);
+  }, [suggestedMinutes, technique.name]);
+
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => {
+      setTimeLeft((current) => {
+        if (current <= 1) {
+          setRunning(false);
+          setComplete(true);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [running]);
+
+  const totalSeconds = minutes * 60;
+  const progress = totalSeconds ? ((totalSeconds - timeLeft) / totalSeconds) * 100 : 0;
+  const stepIndex = Math.min(technique.steps.length - 1, Math.floor((progress / 100) * technique.steps.length));
+  const reset = (nextMinutes = minutes) => {
+    setMinutes(nextMinutes);
+    setTimeLeft(nextMinutes * 60);
+    setRunning(false);
+    setComplete(false);
+  };
+
+  return (
+    <div className="rounded-3xl bg-[#f3f7f5] p-5 text-center dark:bg-slate-900">
+      <p className="text-xs font-bold uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">Session timer</p>
+      <div className="mx-auto mt-5 flex h-40 w-40 flex-col items-center justify-center rounded-full border-[10px] border-emerald-100 bg-white shadow-inner dark:border-emerald-950 dark:bg-slate-800">
+        <span className="font-serif text-4xl font-bold">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}</span>
+        <span className="mt-1 text-xs text-muted-foreground">{complete ? "Complete" : running ? "In session" : "Ready"}</span>
+      </div>
+      <Progress value={progress} className="mt-5 h-2" />
+      <p className="mt-5 min-h-12 text-sm font-medium leading-6 text-slate-700 dark:text-slate-200">{complete ? "Take one slow breath before moving on." : technique.steps[stepIndex]}</p>
+      <div className="mt-4 flex justify-center gap-2">{[5, 10, 15].map((option) => <button key={option} onClick={() => reset(option)} disabled={running} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${minutes === option ? "bg-emerald-700 text-white" : "bg-white text-slate-500 hover:bg-emerald-50 dark:bg-slate-800"}`}>{option} min</button>)}</div>
+      <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
+        <Button onClick={() => complete ? reset() : setRunning((value) => !value)} className="rounded-full bg-emerald-700 hover:bg-emerald-800">{running ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{complete ? "Start again" : running ? "Pause" : timeLeft < totalSeconds ? "Resume" : "Begin session"}</Button>
+        <Button variant="outline" size="icon" className="rounded-full" onClick={() => reset()} aria-label="Reset meditation timer"><RotateCcw className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+};
+
 const MindfulnessInterface = () => {
   const [activePractice, setActivePractice] = useState("breathing");
-  const [breathingActive, setBreathingActive] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState('inhale'); // inhale, hold, exhale
   const [breathingPhaseTime, setBreathingPhaseTime] = useState(0);
   const [breathingTimeLeft, setBreathingTimeLeft] = useState(0);
-  const [breathingCycle, setBreathingCycle] = useState(0);
-  const [meditationActive, setMeditationActive] = useState(false);
-  const [meditationTimer, setMeditationTimer] = useState(300); // 5 minutes default
-  const [remainingTime, setRemainingTime] = useState(300);
-  const [currentPhase, setCurrentPhase] = useState('inhale');
-  const [currentPhaseTime, setCurrentPhaseTime] = useState(0);
-
-  // Breathing exercise logic
-  useEffect(() => {
-    if (!breathingActive) return;
-
-    const interval = setInterval(() => {
-      setBreathingCycle(prev => {
-        const newCycle = prev + 1;
-        const phase = Math.floor(newCycle / 4) % 3;
-        
-        switch (phase) {
-          case 0:
-            setBreathingPhase('inhale');
-            break;
-          case 1:
-            setBreathingPhase('hold');
-            break;
-          case 2:
-            setBreathingPhase('exhale');
-            break;
-        }
-        
-        return newCycle;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [breathingActive]);
-
-  // Meditation timer logic
-  useEffect(() => {
-    if (!meditationActive || remainingTime <= 0) return;
-
-    const interval = setInterval(() => {
-      setRemainingTime(prev => {
-        if (prev <= 1) {
-          setMeditationActive(false);
-          return meditationTimer;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [meditationActive, remainingTime, meditationTimer]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -285,17 +296,16 @@ const MindfulnessInterface = () => {
       if (phase === 'inhale') currentStepIndex = 2;
       else if (phase === 'exhale') currentStepIndex = 3;
     }
+    const phaseColors = phase === 'inhale' ? 'bg-sky-500' : phase === 'hold' ? 'bg-amber-500' : 'bg-emerald-600';
     return (
-      <div className="flex flex-col items-center mb-4 w-full">
-        <div className="mb-6 text-center">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Time Remaining</div>
-          <div className="text-3xl font-mono text-blue-600 dark:text-blue-400 font-bold">
-            {formatTime(timeLeft)}
-          </div>
-          <div className="w-full max-w-md mt-2">
-            <Progress value={((exercise.duration - timeLeft) / exercise.duration) * 100} />
-          </div>
-        </div>
+      <div className="mb-4 flex w-full flex-col items-center rounded-3xl bg-slate-50 p-5 dark:bg-slate-900">
+        <motion.div animate={{ scale: phase === 'inhale' ? 1.08 : phase === 'exhale' ? 0.88 : 1 }} transition={{ duration: Math.max(1, phaseTime), ease: 'easeInOut' }} className={`flex h-40 w-40 flex-col items-center justify-center rounded-full text-white shadow-xl ${phaseColors}`}>
+          <span className="text-xs font-bold uppercase tracking-[0.18em] opacity-75">{phase}</span>
+          <span className="mt-1 font-serif text-5xl font-bold">{phaseTime}</span>
+          <span className="text-xs opacity-70">seconds</span>
+        </motion.div>
+        <div className="mt-5 flex w-full max-w-md items-center justify-between text-xs text-muted-foreground"><span>Total remaining</span><span className="font-bold text-foreground">{formatTime(timeLeft)}</span></div>
+        <Progress value={((exercise.duration - timeLeft) / exercise.duration) * 100} className="mt-2 h-2 w-full max-w-md" />
       </div>
     );
   };
@@ -512,64 +522,6 @@ const MindfulnessInterface = () => {
     { emoji: "😇", label: "Blissful", value: 5 }
   ];
 
-  // Meditation Timer Component
-  const MeditationTimer = ({ technique, isActive, onComplete }) => {
-    const [timeLeft, setTimeLeft] = useState(parseInt(technique.duration) * 60);
-    const [isPaused, setIsPaused] = useState(false);
-    const [currentStep, setCurrentStep] = useState(0);
-
-    useEffect(() => {
-      if (!isActive || isPaused) return;
-
-      const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            onComplete();
-            return parseInt(technique.duration) * 60;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }, [isActive, isPaused, technique.duration, onComplete]);
-
-    const formatTime = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    return (
-      <div className="text-center space-y-6">
-        <div className="meditation-timer w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-purple-400 to-blue-500 flex items-center justify-center text-white text-2xl font-bold">
-          {formatTime(timeLeft)}
-        </div>
-        <div className="text-lg font-medium text-gray-700 dark:text-gray-200">
-          {technique.steps[currentStep]}
-        </div>
-        <div className="flex justify-center space-x-4">
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            className="px-4 py-2 bg-white bg-opacity-20 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-opacity-30 transition-all border border-gray-200 dark:border-gray-600"
-          >
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
-          <button
-            onClick={() => {
-              setTimeLeft(parseInt(technique.duration) * 60);
-              setCurrentStep(0);
-              setIsPaused(false);
-            }}
-            className="px-4 py-2 bg-white bg-opacity-20 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-opacity-30 transition-all border border-gray-200 dark:border-gray-600"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   // Mood Tracker Component
   const MoodTracker = ({ onMoodSelect }) => {
     const [selectedMood, setSelectedMood] = useState(null);
@@ -690,7 +642,6 @@ const MindfulnessInterface = () => {
   // Meditation state
   const [selectedMeditationCategory, setSelectedMeditationCategory] = useState(null);
   const [selectedMeditationTechnique, setSelectedMeditationTechnique] = useState(null);
-  const [isMeditationTimerActive, setIsMeditationTimerActive] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [selectedMeditationTechniques, setSelectedMeditationTechniques] = useState([]);
   const [beforeMood, setBeforeMood] = useState(null);
@@ -707,11 +658,6 @@ const MindfulnessInterface = () => {
 
   const handleMeditationTechniqueSelect = (technique) => {
     setSelectedMeditationTechnique(technique);
-    setIsMeditationTimerActive(false);
-  };
-
-  const handleMeditationTimerComplete = () => {
-    setIsMeditationTimerActive(false);
   };
 
   const addTechniqueToRoutine = (technique) => {
@@ -872,7 +818,7 @@ const MindfulnessInterface = () => {
           <TabsContent value="breathing">
             {/* Floating Particles */}
             <div className="relative">
-              <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+              <div className="hidden fixed inset-0 pointer-events-none overflow-hidden z-0">
                 {[...Array(20)].map((_, i) => (
                   <motion.div
                     key={i}
@@ -908,12 +854,12 @@ const MindfulnessInterface = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-white dark:bg-gray-800 rounded-xl p-6 cursor-pointer border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                        className="group cursor-pointer rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
                         onClick={() => handleSelectExercise(exercise)}
                       >
                         <div className="text-center space-y-4">
-                          <div className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-2xl">{exercise.logo}</span>
+                          <div className="w-16 h-16 mx-auto bg-[#dff0e8] rounded-2xl flex items-center justify-center transition group-hover:rotate-3 dark:bg-emerald-950">
+                            <span className="text-2xl">{exercise.logo}</span>
                           </div>
                           <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{exercise.title}</h3>
                           <p className="text-gray-600 dark:text-gray-300">{exercise.description}</p>
@@ -930,7 +876,7 @@ const MindfulnessInterface = () => {
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700"
+                    className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8"
                   >
                     <div className="flex justify-between items-start mb-6">
                       <button
@@ -958,16 +904,16 @@ const MindfulnessInterface = () => {
                             // Map phase to step index for highlighting
                             let stepIndex = 0;
                             if (selectedExercise.title.includes("4-7-8")) {
-                              if (currentPhase === "inhale") stepIndex = 1;
-                              else if (currentPhase === "hold") stepIndex = 2;
-                              else if (currentPhase === "exhale") stepIndex = 3;
+                              if (breathingPhase === "inhale") stepIndex = 1;
+                              else if (breathingPhase === "hold") stepIndex = 2;
+                              else if (breathingPhase === "exhale") stepIndex = 3;
                             } else if (selectedExercise.title.includes("Box")) {
-                              if (currentPhase === "inhale") stepIndex = 1;
-                              else if (currentPhase === "hold") stepIndex = 2;
-                              else if (currentPhase === "exhale") stepIndex = 3;
+                              if (breathingPhase === "inhale") stepIndex = 1;
+                              else if (breathingPhase === "hold") stepIndex = 2;
+                              else if (breathingPhase === "exhale") stepIndex = 3;
                             } else {
-                              if (currentPhase === "inhale") stepIndex = 2;
-                              else if (currentPhase === "exhale") stepIndex = 3;
+                              if (breathingPhase === "inhale") stepIndex = 2;
+                              else if (breathingPhase === "exhale") stepIndex = 3;
                             }
                             return (
                               <li key={index} className={`flex items-start space-x-3 ${isTimerActive && index === stepIndex ? 'bg-green-50 dark:bg-green-900 rounded-lg px-2 py-1' : ''}`}>
@@ -977,7 +923,7 @@ const MindfulnessInterface = () => {
                                 <span className="text-gray-700 dark:text-gray-300">
                                   {step}
                                   {isTimerActive && index === stepIndex && (
-                                    <span className="ml-2 text-green-600 font-bold">({currentPhaseTime}s)</span>
+                                    <span className="ml-2 text-green-600 font-bold">({breathingPhaseTime}s)</span>
                                   )}
                                 </span>
                             </li>
@@ -1037,7 +983,7 @@ const MindfulnessInterface = () => {
           <TabsContent value="meditation">
             <div className="space-y-8">
               {/* Floating Particles */}
-              <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+              <div className="hidden fixed inset-0 pointer-events-none overflow-hidden z-0">
                 {[...Array(15)].map((_, i) => (
                   <motion.div
                     key={i}
@@ -1071,10 +1017,10 @@ const MindfulnessInterface = () => {
                     <div className="lotus-animation w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-3xl">🌸</span>
                     </div>
-                    <h2 className="text-4xl font-bold text-gray-800 dark:text-white mb-4">
-                      Welcome to Meditation Explorer
+                    <h2 className="font-serif text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:text-4xl">
+                      Choose a meditation path
                     </h2>
-                    <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
+                    <p className="text-base leading-7 text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 sm:text-lg">
                       Discover the transformative power of meditation. Learn different techniques to find your inner peace, 
                       improve focus, and cultivate mindfulness in your daily life.
                     </p>
@@ -1094,11 +1040,11 @@ const MindfulnessInterface = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="card-hover bg-white dark:bg-gray-800 rounded-xl p-6 cursor-pointer border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                        className="group cursor-pointer rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
                         onClick={() => setSelectedMeditationCategory(category)}
                       >
                 <div className="text-center space-y-4">
-                          <div className={`w-20 h-20 mx-auto bg-gradient-to-r from-${category.color}-400 to-${category.color === 'blue' ? 'purple' : category.color === 'green' ? 'blue' : 'pink'}-500 rounded-full flex items-center justify-center`}>
+                          <div className={`w-20 h-20 mx-auto rounded-2xl flex items-center justify-center transition group-hover:rotate-3 ${['bg-sky-100 dark:bg-sky-950', 'bg-emerald-100 dark:bg-emerald-950', 'bg-rose-100 dark:bg-rose-950'][index % 3]}`}>
                             <span className="text-white text-3xl">{category.icon}</span>
                   </div>
                           <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{category.title}</h3>
@@ -1200,22 +1146,7 @@ const MindfulnessInterface = () => {
 
                       {/* Timer Section */}
                       <div className="space-y-6">
-                        <MeditationTimer
-                          key={selectedMeditationTechnique?.name}
-                          technique={selectedMeditationTechnique}
-                          isActive={isMeditationTimerActive}
-                          onComplete={handleMeditationTimerComplete}
-                        />
-                        <button
-                          onClick={() => setIsMeditationTimerActive(!isMeditationTimerActive)}
-                          className={`w-full py-3 rounded-lg font-medium transition-all ${
-                            isMeditationTimerActive
-                              ? 'bg-red-500 hover:bg-red-600 text-white'
-                              : 'bg-gradient-to-r from-purple-400 to-blue-500 hover:from-purple-500 hover:to-blue-600 text-white'
-                          }`}
-                        >
-                          {isMeditationTimerActive ? 'Stop Session' : 'Start Session'}
-                        </button>
+                        <MeditationTimer key={selectedMeditationTechnique?.name} technique={selectedMeditationTechnique} />
                       </div>
                     </div>
                   </motion.div>
@@ -1388,11 +1319,12 @@ const MindfulnessInterface = () => {
 
           {/* Focus Sounds */}
           <TabsContent value="focus">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Sound library</p><h2 className="mt-1 font-serif text-3xl font-bold">Set the atmosphere.</h2><p className="mt-2 text-sm text-muted-foreground">One sound plays at a time, so your focus stays uncluttered.</p></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {focusMusic.map((track, index) => (
                 <div
                   key={index}
-                  className="flex items-center bg-card dark:bg-gray-900 rounded-2xl shadow-sm px-6 py-4 space-x-4 border border-gray-100 dark:border-gray-700"
+                  className={`flex items-center rounded-2xl px-4 py-4 space-x-4 border shadow-sm transition ${playingIndex === index ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' : 'border-slate-200 bg-white hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-900'}`}
                 >
                   {/* Icon */}
                   <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-gradient-to-br from-serenity-400 to-calm-400">
@@ -1422,7 +1354,7 @@ const MindfulnessInterface = () => {
 
           {/* Games Modern Grid */}
           <TabsContent value="games">
-            <Card className="wellness-card">
+            <Card className="rounded-[1.75rem] border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <CardHeader className="text-center">
                 <CardTitle className="flex items-center justify-center space-x-2">
                   <Heart className="w-6 h-6 text-pink-500" />

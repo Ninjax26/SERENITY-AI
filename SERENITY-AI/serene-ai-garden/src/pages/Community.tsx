@@ -95,7 +95,12 @@ const CommunityForum = () => {
         .select("post_id, user_id")
         .in("post_id", postIds);
 
-      if (votesError) throw votesError;
+      if (votesError) {
+        console.error("Posts loaded, but votes could not be loaded", votesError);
+        setPostVotes({});
+        setUserVoted({});
+        return;
+      }
 
       const voteCounts: Record<string, number> = {};
       const voted: Record<string, boolean> = {};
@@ -107,7 +112,7 @@ const CommunityForum = () => {
       setUserVoted(voted);
     } catch (fetchError) {
       console.error("Failed to load community posts", fetchError);
-      setError("We couldn't load the community right now. Please try again.");
+      setError("We couldn't load community posts. Check the Supabase posts table and its access policies.");
     } finally {
       setIsLoading(false);
     }
@@ -116,13 +121,19 @@ const CommunityForum = () => {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!mounted) return;
-      const currentUser = data.user ?? null;
+      const currentUser = data.session?.user ?? null;
       setUser(currentUser);
       setUserId(currentUser?.id ?? null);
       setAuthLoading(false);
+      if (sessionError) console.error("Could not restore the auth session", sessionError);
       fetchPosts(currentUser?.id ?? null);
+    }).catch((sessionError) => {
+      if (!mounted) return;
+      console.error("Could not restore the auth session", sessionError);
+      setAuthLoading(false);
+      fetchPosts(null);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {

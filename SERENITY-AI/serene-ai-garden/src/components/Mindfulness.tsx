@@ -19,6 +19,7 @@ import LifeStats from './serenity-game/src/SERENITY-AI/LifeStats';
 import { Progress } from "@/components/ui/progress";
 
 const MindfulnessInterface = () => {
+  const [activePractice, setActivePractice] = useState("breathing");
   const [breathingActive, setBreathingActive] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState('inhale'); // inhale, hold, exhale
   const [breathingPhaseTime, setBreathingPhaseTime] = useState(0);
@@ -833,15 +834,22 @@ const MindfulnessInterface = () => {
   };
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-serenity-800 mb-2">Mindfulness Center</h1>
-          <p className="text-gray-600">Find your inner peace with guided exercises and meditation</p>
+    <div className="min-h-screen min-w-0 bg-[#f5f8f6] p-3 sm:p-6 space-y-6 dark:bg-slate-950">
+      <div className="max-w-7xl min-w-0 mx-auto">
+        <div className="mb-8 rounded-[2rem] bg-[#173f36] px-5 py-8 text-white sm:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-emerald-200">Mindfulness center</p>
+          <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div><h1 className="font-serif text-4xl font-bold tracking-tight sm:text-5xl">What would help right now?</h1><p className="mt-3 max-w-2xl text-emerald-50/70">Choose a short practice, settle into a meditation, or reset your attention with sound and play.</p></div>
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setActivePractice('breathing')} className="rounded-xl bg-white/10 px-3 py-3 text-xs font-bold transition hover:bg-white/20"><Wind className="mx-auto mb-1 h-4 w-4" />Calm</button>
+              <button onClick={() => setActivePractice('meditation')} className="rounded-xl bg-white/10 px-3 py-3 text-xs font-bold transition hover:bg-white/20"><Brain className="mx-auto mb-1 h-4 w-4" />Reflect</button>
+              <button onClick={() => setActivePractice('focus')} className="rounded-xl bg-white/10 px-3 py-3 text-xs font-bold transition hover:bg-white/20"><Music className="mx-auto mb-1 h-4 w-4" />Focus</button>
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="breathing" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activePractice} onValueChange={setActivePractice} className="min-w-0 space-y-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 sm:grid-cols-4">
             <TabsTrigger value="breathing" className="flex items-center space-x-2">
               <Wind className="w-4 h-4" />
               <span>Breathing</span>
@@ -1435,7 +1443,7 @@ const MindfulnessInterface = () => {
                       style={{
                         width: '100%',
                         maxWidth: 1300,
-                        minWidth: 350,
+                        minWidth: 0,
                         margin: '0 auto',
                         justifyContent: 'center',
                         alignItems: 'center',

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Brain, Moon, Sun, Users } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Brain, Moon, Sun, Users, ChevronDown, LogOut } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { useTheme } from "@/hooks/use-theme";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface NavigationProps {
   currentView?: string;
@@ -13,7 +14,7 @@ interface NavigationProps {
 
 const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<{ user_metadata?: { avatar_url?: string }; email?: string } | null>(null);
+  const [user, setUser] = useState<{ user_metadata?: { avatar_url?: string; full_name?: string; name?: string }; email?: string } | null>(null);
   const [theme, setTheme] = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,6 +72,20 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
     return location.pathname === item.path;
   };
 
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Account';
+
+  const accountAvatar = (sizeClass = 'h-8 w-8') => user?.user_metadata?.avatar_url ? (
+    <img
+      src={user.user_metadata.avatar_url}
+      alt=""
+      className={`${sizeClass} rounded-full border border-serenity-300 object-cover`}
+    />
+  ) : (
+    <span className={`inline-flex ${sizeClass} items-center justify-center rounded-full bg-serenity-100 text-sm font-bold text-serenity-700`}>
+      {user?.email?.[0]?.toUpperCase() || 'U'}
+    </span>
+  );
+
   return (
     <nav className="bg-white/90 dark:bg-gray-900 backdrop-blur-md border-b border-white/50 dark:border-gray-800 sticky top-0 z-50">
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
@@ -117,41 +132,44 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
           </div>
 
           {/* Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-2 flex-shrink-0 ml-2">
+          <div className="ml-1 hidden shrink-0 items-center gap-2 md:flex">
             {!user ? (
-              <Button
-                variant="ghost"
-                className="text-serenity-700 hover:bg-serenity-50"
-                onClick={signIn}
-              >
-                Sign In
-              </Button>
-            ) : (
-              <div className="flex items-center space-x-2">
-                {user.user_metadata?.avatar_url ? (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt="avatar"
-                    className="w-8 h-8 rounded-full border border-serenity-300"
-                  />
-                ) : (
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-serenity-100 text-serenity-700 font-bold">
-                    {user.email?.[0]?.toUpperCase()}
-                  </span>
-                )}
-                <span className="text-sm text-serenity-700 font-medium truncate max-w-[100px] hidden lg:inline">{user.email}</span>
+              <>
                 <Button
-                  variant="outline"
-                  className="border-serenity-300 text-serenity-700 hover:bg-serenity-50"
-                  onClick={signOut}
+                  variant="ghost"
+                  className="text-serenity-700 hover:bg-serenity-50"
+                  onClick={signIn}
                 >
-                  Sign Out
+                  Sign In
                 </Button>
-              </div>
+                <Button onClick={handleGetStarted} className="rounded-full bg-emerald-700 text-white shadow-sm hover:bg-emerald-800">
+                  Get Started
+                </Button>
+              </>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Open account menu"
+                    className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 pr-2 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                  >
+                    {accountAvatar()}
+                    <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
+                  <DropdownMenuLabel className="py-2">
+                    <span className="block truncate text-sm font-semibold">{displayName}</span>
+                    <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">{user.email}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="cursor-pointer rounded-lg py-2 text-rose-600 focus:text-rose-700">
+                    <LogOut className="mr-2 h-4 w-4" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <Button onClick={handleGetStarted} className="rounded-full bg-emerald-700 text-white shadow-sm hover:bg-emerald-800">
-              Get Started
-            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -195,17 +213,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 px-3 py-2">
-                    {user.user_metadata?.avatar_url ? (
-                      <img
-                        src={user.user_metadata.avatar_url}
-                        alt="avatar"
-                        className="w-8 h-8 rounded-full border border-serenity-300"
-                      />
-                    ) : (
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-serenity-100 text-serenity-700 font-bold">
-                        {user.email?.[0]?.toUpperCase()}
-                      </span>
-                    )}
+                    {accountAvatar()}
                     <span className="text-sm text-serenity-700 font-medium truncate">{user.email}</span>
                   </div>
                   <Button variant="outline" className="w-full border-serenity-300 text-serenity-700 hover:bg-serenity-50" onClick={signOut}>
@@ -213,9 +221,11 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                   </Button>
                 </div>
               )}
-              <Button onClick={handleGetStarted} className="w-full bg-emerald-700 text-white hover:bg-emerald-800">
-                Get Started
-              </Button>
+              {!user && (
+                <Button onClick={handleGetStarted} className="w-full bg-emerald-700 text-white hover:bg-emerald-800">
+                  Get Started
+                </Button>
+              )}
             </div>
           </div>
         )}

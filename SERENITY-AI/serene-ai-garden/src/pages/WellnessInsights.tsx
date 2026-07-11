@@ -50,7 +50,7 @@ const WellnessInsights = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
-      <DashboardOverview />
+      <div className="min-w-0 overflow-x-hidden"><DashboardOverview /></div>
     </div>
   );
 };

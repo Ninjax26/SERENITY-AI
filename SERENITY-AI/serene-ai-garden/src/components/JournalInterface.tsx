@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag } from 'lucide-react';
+import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag, Trash2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import type { User, PdfTextItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import jsPDF from 'jspdf';
 import Papa from 'papaparse';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DailyQuote from './DailyQuote';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface JournalEntry {
   id: string;
@@ -39,6 +40,7 @@ const JournalInterface = () => {
   const [currentTitle, setCurrentTitle] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const { toast } = useToast();
 
   const writingPrompts = [
@@ -234,6 +236,18 @@ const JournalInterface = () => {
     return streak;
   })();
 
+  const handleDeleteEntry = async (entry: JournalEntry) => {
+    if (!user || !window.confirm(`Delete “${entry.title}”? This cannot be undone.`)) return;
+    const { error } = await supabase.from('journal_entries').delete().eq('id', entry.id).eq('user_id', user.id);
+    if (error) {
+      toast({ title: "Entry not deleted", description: error.message, variant: "destructive" });
+      return;
+    }
+    setJournalEntries((entries) => entries.filter((item) => item.id !== entry.id));
+    setSelectedEntry(null);
+    toast({ title: "Entry deleted", description: "The journal entry was removed." });
+  };
+
   // Export journal as CSV
   const exportJournalAsCSV = () => {
     const csvContent = Papa.unparse(journalEntries.map((entry) => ({
@@ -304,8 +318,8 @@ const JournalInterface = () => {
           <TabsContent value="journal">
             {/* Export Buttons */}
             <div className="flex justify-end gap-2 mb-2">
-              <Button variant="outline" size="sm" onClick={exportJournalAsCSV}>Export as CSV</Button>
-              <Button variant="outline" size="sm" onClick={exportJournalAsPDF}>Export as PDF</Button>
+              <Button variant="outline" size="sm" onClick={exportJournalAsCSV} disabled={!journalEntries.length}>Export as CSV</Button>
+              <Button variant="outline" size="sm" onClick={exportJournalAsPDF} disabled={!journalEntries.length}>Export as PDF</Button>
             </div>
             {/* Header */}
             <div className="text-center mb-8 animate-fade-in">
@@ -353,6 +367,7 @@ const JournalInterface = () => {
                         type="text"
                         value={currentTitle}
                         onChange={(e) => setCurrentTitle(e.target.value)}
+                        maxLength={180}
                         placeholder="Give your entry a title..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-calm-400 focus:ring-calm-400 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
@@ -363,12 +378,15 @@ const JournalInterface = () => {
                       <Textarea
                         value={currentEntry}
                         onChange={(e) => setCurrentEntry(e.target.value)}
+                        maxLength={10000}
                         placeholder="Start writing your thoughts here..."
                         className="min-h-64 border-calm-200 focus:border-calm-400 focus:ring-calm-400 resize-none bg-white dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
-                      <span className="text-sm text-gray-500 dark:text-gray-300">
-                        {currentEntry.split(' ').filter(word => word.length > 0).length} words
-                      </span>
+                      <div className="mb-3 mt-2 flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-300">
+                        <span>{currentEntry.split(' ').filter(word => word.length > 0).length} words</span>
+                        <span>{Math.min(100, Math.round((currentEntry.split(' ').filter(word => word.length > 0).length / 250) * 100))}% of a 250-word reflection</span>
+                      </div>
+                      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, (currentEntry.split(' ').filter(word => word.length > 0).length / 250) * 100)}%` }} /></div>
                       <Button
                         onClick={handleSaveEntry}
                         disabled={!currentEntry.trim()}
@@ -399,7 +417,7 @@ const JournalInterface = () => {
                         <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No saved entries yet.</p>
                       )}
                       {journalEntries.map((entry) => (
-                        <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer dark:border-gray-700">
+                        <button type="button" key={entry.id} onClick={() => setSelectedEntry(entry)} className="w-full border border-gray-200 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer dark:border-gray-700 text-left">
                           <div className="flex items-start justify-between mb-2">
                             <h3 className="font-medium text-gray-800 dark:text-white truncate">{entry.title}</h3>
                             <Badge className={`text-xs ${getSentimentColor(entry.sentiment)}`}>{getSentimentEmoji(entry.sentiment)}</Badge>
@@ -414,7 +432,7 @@ const JournalInterface = () => {
                               <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
                             ))}
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </CardContent>
@@ -459,6 +477,22 @@ const JournalInterface = () => {
             </div>
           </TabsContent>
         </Tabs>
+        <Dialog open={Boolean(selectedEntry)} onOpenChange={(open) => !open && setSelectedEntry(null)}>
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+            {selectedEntry && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="pr-8 font-serif text-2xl">{selectedEntry.title}</DialogTitle>
+                  <DialogDescription>{selectedEntry.date.toLocaleString()} · {selectedEntry.wordCount} words · {selectedEntry.sentiment}</DialogDescription>
+                </DialogHeader>
+                <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700 dark:text-slate-300">{selectedEntry.content}</p>
+                <div className="flex justify-end border-t pt-4">
+                  <Button variant="outline" className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleDeleteEntry(selectedEntry)}><Trash2 className="mr-2 h-4 w-4" />Delete entry</Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -36,7 +36,13 @@ Then in the new Supabase project:
 
 - Enable Google OAuth again if you use Google sign-in.
 - Add your app URL to the authentication redirect settings.
-- Verify Row Level Security policies on the `public` tables if you add new tables later.
+- Open **SQL Editor**, paste `supabase/secure_app_tables.sql`, and run it once.
+  This also adds the missing `chat_messages.emotion` column used by the current app.
+- In **Table Editor**, verify Row Level Security is enabled for `chat_messages`,
+  `journal_entries`, `mood_entries`, `posts`, and `post_votes`.
+- Add the same `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` values to your
+  deployment provider. A local `.env` is not uploaded to GitHub or automatically
+  copied to Vercel/Netlify.
 
 ## App tables restored from the backup
 
@@ -49,4 +55,3 @@ Then in the new Supabase project:
 - `replies`
 - `reply_likes`
 - `user_insights`
-

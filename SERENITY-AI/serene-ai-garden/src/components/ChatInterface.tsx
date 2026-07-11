@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Send, Heart, Sparkles, Smile, MessageCircle, Mic, MicOff, Volume2 } from 'lucide-react';
-import { getGeminiAIResponse, detectMood, getDailyAffirmation } from "../aii";
+import { getGeminiAIResponse, detectMood } from "../aii";
 import Papa from 'papaparse';
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '../supabaseClient';
@@ -61,7 +61,7 @@ const ChatInterface = () => {
           .then(({ data: rows, error }) => {
             if (error) {
               setError('Failed to load chat messages.');
-            } else if (rows) {
+            } else if (rows?.length) {
               setMessages(rows.map((row: { id: string; content: string; sender: 'user' | 'ai'; created_at: string; emotion?: string }) => ({
                 id: row.id,
                 content: row.content,
@@ -126,12 +126,17 @@ const ChatInterface = () => {
       });
       if (insertError) throw insertError;
 
-      // Conversation context: last 6 messages
-      const contextMessages = [...messages, userMessage].slice(-6).map(m => ({
+      // The current message is appended inside getGeminiAIResponse, so only send prior context here.
+      const contextMessages = messages.slice(-6).map(m => ({
         role: m.sender,
         content: m.content
       }));
-      const mood = await detectMood(userMessage.content);
+      let mood = 'neutral';
+      try {
+        mood = await detectMood(userMessage.content);
+      } catch {
+        // Mood classification enhances the prompt but must not block the main reply.
+      }
       const aiText = await getGeminiAIResponse({
         userMessage: userMessage.content,
         contextMessages,
@@ -144,7 +149,9 @@ const ChatInterface = () => {
         timestamp: new Date(),
         emotion: mood || 'supportive'
       };
-      // Save AI message to Supabase
+      setMessages(prev => [...prev, aiMessage]);
+
+      // A persistence failure should not discard a response the user already received.
       const { error: aiInsertError } = await supabase.from('chat_messages').insert({
         user_id: user.id,
         content: aiMessage.content,
@@ -152,9 +159,9 @@ const ChatInterface = () => {
         created_at: aiMessage.timestamp.toISOString(),
         emotion: aiMessage.emotion
       });
-      if (aiInsertError) throw aiInsertError;
-
-      setMessages(prev => [...prev, aiMessage]);
+      if (aiInsertError) {
+        toast({ title: "Reply not saved", description: "The response is visible, but could not be added to your history.", variant: "destructive" });
+      }
     } catch (err) {
       console.error('Gemini API error:', err);
       setMessages(prev => [...prev, {
@@ -185,8 +192,12 @@ const ChatInterface = () => {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        toast({ title: "Microphone unavailable", description: "Voice input could not be started.", variant: "destructive" });
+      }
     }
   };
 
@@ -204,10 +215,36 @@ const ChatInterface = () => {
     window.speechSynthesis.speak(utter);
   };
 
+  const saveImportedMessage = async (content: string) => {
+    if (!user || !content.trim()) {
+      throw new Error('No readable text was found in this file.');
+    }
+    const importedMsg: Message = {
+      id: Date.now().toString(),
+      content: content.trim(),
+      sender: 'user',
+      timestamp: new Date()
+    };
+    const { error } = await supabase.from('chat_messages').insert({
+      user_id: user.id,
+      content: importedMsg.content,
+      sender: importedMsg.sender,
+      created_at: importedMsg.timestamp.toISOString(),
+      emotion: null
+    });
+    if (error) throw error;
+    setMessages(prev => [...prev, importedMsg]);
+  };
+
   // Add file import handlers
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    event.target.value = '';
+    if (!file) return;
+    if (!user) {
+      setLoginWarning('You must be signed in before importing chat history.');
+      return;
+    }
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       toast({ title: "File too large", description: "Please upload files under 10 MB.", variant: "destructive" });
@@ -217,51 +254,34 @@ const ChatInterface = () => {
       Papa.parse(file, {
         complete: async (results) => {
           const text = (results.data as string[][]).map(row => row.join(', ')).join('\n');
-          const importedMsg = {
-            id: Date.now().toString(),
-            content: text,
-            sender: 'user' as const,
-            timestamp: new Date(),
-            emotion: undefined
-          };
-          setMessages(prev => [...prev, importedMsg]);
-          await supabase.from('chat_messages').insert({
-            user_id: user.id,
-            content: importedMsg.content,
-            sender: importedMsg.sender,
-            created_at: importedMsg.timestamp.toISOString(),
-            emotion: importedMsg.emotion || null
-          });
+          try {
+            await saveImportedMessage(text);
+            toast({ title: "CSV imported", description: "The imported message was saved." });
+          } catch (error) {
+            toast({ title: "Import failed", description: error instanceof Error ? error.message : "The CSV could not be imported.", variant: "destructive" });
+          }
         },
         error: () => toast({ title: "Import failed", description: "Failed to parse CSV file.", variant: "destructive" })
       });
     } else if (file.type === 'application/pdf') {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const typedarray = new Uint8Array(e.target?.result as ArrayBuffer);
-        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map((item: { str: string }) => item.str).join(' ') + '\n';
+        try {
+          const typedarray = new Uint8Array(e.target?.result as ArrayBuffer);
+          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map((item: { str: string }) => item.str).join(' ') + '\n';
+          }
+          await saveImportedMessage(text);
+          toast({ title: "PDF imported", description: "The imported message was saved." });
+        } catch (error) {
+          toast({ title: "Import failed", description: error instanceof Error ? error.message : "The PDF could not be imported.", variant: "destructive" });
         }
-        const importedMsg = {
-          id: Date.now().toString(),
-          content: text,
-            sender: 'user' as const,
-          timestamp: new Date(),
-          emotion: undefined
-        };
-        setMessages(prev => [...prev, importedMsg]);
-        await supabase.from('chat_messages').insert({
-          user_id: user.id,
-          content: importedMsg.content,
-          sender: importedMsg.sender,
-          created_at: importedMsg.timestamp.toISOString(),
-          emotion: importedMsg.emotion || null
-        });
       };
+      reader.onerror = () => toast({ title: "Import failed", description: "The PDF could not be read.", variant: "destructive" });
       reader.readAsArrayBuffer(file);
     } else {
       toast({ title: "Unsupported file", description: "Please upload a PDF or CSV file.", variant: "destructive" });
@@ -270,11 +290,11 @@ const ChatInterface = () => {
 
   // Export chat as CSV
   const exportChatAsCSV = () => {
-    const csvRows = [
-      'Sender,Content,Time',
-      ...messages.map(m => `${m.sender},"${m.content.replace(/"/g, '""')}",${m.timestamp.toLocaleString()}`)
-    ];
-    const csvContent = csvRows.join('\n');
+    const csvContent = Papa.unparse(messages.map((message) => ({
+      Sender: message.sender,
+      Content: message.content,
+      Time: message.timestamp.toISOString()
+    })));
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -288,9 +308,20 @@ const ChatInterface = () => {
   const exportChatAsPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(12);
-    messages.forEach((m, i) => {
-      doc.text(`${m.sender.toUpperCase()}: ${m.content}`, 10, 10 + i * 10);
-      doc.text(`Time: ${m.timestamp.toLocaleString()}`, 10, 15 + i * 10);
+    let y = 15;
+    messages.forEach((message) => {
+      const lines = doc.splitTextToSize(`${message.sender.toUpperCase()}: ${message.content}`, 185);
+      const blockHeight = lines.length * 6 + 10;
+      if (y + blockHeight > 285) {
+        doc.addPage();
+        y = 15;
+      }
+      doc.text(lines, 10, y);
+      y += lines.length * 6;
+      doc.setFontSize(9);
+      doc.text(message.timestamp.toLocaleString(), 10, y + 1);
+      doc.setFontSize(12);
+      y += 10;
     });
     doc.save('chat_messages.pdf');
   };
@@ -334,7 +365,7 @@ const ChatInterface = () => {
           <p className="text-muted-foreground">Your safe space for emotional support and meaningful conversations</p>
           <Badge className="mt-2 bg-wellness-100 text-wellness-700 border-wellness-200">
             <Sparkles className="w-4 h-4 mr-1" />
-            Private & Secure
+            Saved to your account
           </Badge>
         </div>
 
@@ -443,7 +474,7 @@ const ChatInterface = () => {
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   placeholder="Share what's on your mind..."
                   className="flex-1 border-serenity-200 focus:border-serenity-400 focus:ring-serenity-400"
                 />
@@ -461,7 +492,7 @@ const ChatInterface = () => {
               </div>
               <p className="text-xs text-gray-500 mt-2 flex items-center">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Your conversations are private and secure
+                Serenity AI offers support, not medical diagnosis or emergency care.
               </p>
             </div>
           </CardContent>

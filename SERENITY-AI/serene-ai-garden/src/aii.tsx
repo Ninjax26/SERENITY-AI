@@ -7,11 +7,12 @@ if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE' || apiKey === 'your_gemini_
 }
 
 const ai = new GoogleGenerativeAI(apiKey);
+const MODEL_NAME = "gemini-3.5-flash";
 
 // Helper to detect mood from a message using Gemini
 export async function detectMood(userMessage: string): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: `Analyze the following message and return only the user's mood as one word (e.g., happy, sad, anxious, excited, angry, neutral, etc.):\n${userMessage}` }] }],
       systemInstruction: "You are a mood detection assistant. Only return the mood word, nothing else."
@@ -34,7 +35,7 @@ export async function getGeminiAIResponse({
   mood?: string
 }): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     // Build context for Gemini
     const contents = [
       ...contextMessages.map(m => ({
@@ -44,7 +45,7 @@ export async function getGeminiAIResponse({
       { role: "user", parts: [{ text: userMessage }] }
     ];
     // Adaptive system prompt
-    let systemInstruction = `You are a compassionate and emotionally intelligent psychiatrist.You are an empathetic, non-judgmental mental wellness assistant for Indian youth. Keep answers short, kind, and supportive. Suggest healthy coping strategies. Never replace a doctor. Your role is to support users through thoughtful conversation, help them process their emotions, and provide comfort, encouragement, or advice based on their current mood. Always respond with empathy, patience, and kindness.\n`;
+    let systemInstruction = `You are an empathetic, non-judgmental mental wellness assistant for Indian youth. Keep answers short, kind, and supportive. Suggest healthy coping strategies. Never claim to be a psychiatrist, therapist, or doctor. Your role is to support users through thoughtful conversation, help them process emotions, and provide comfort or general guidance. Always respond with empathy, patience, and kindness.\n`;
     if (mood) {
       systemInstruction += `The user's current mood is: ${mood}.\n`;
       if (["sad", "anxious", "angry", "stressed", "upset"].includes(mood)) {
@@ -68,7 +69,7 @@ export async function getGeminiAIResponse({
 // Daily affirmation generator
 export async function getDailyAffirmation(): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: "Give me a short, positive daily affirmation for emotional well-being." }] }],
       systemInstruction: "You are an affirmation generator. Respond with a single, uplifting affirmation sentence."

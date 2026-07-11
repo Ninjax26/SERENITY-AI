@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Sparkles, Brain, Moon, Sun } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, BookOpen, BarChart3, Menu, X, Brain, Moon, Sun, Users } from 'lucide-react';
 import { supabase } from '@/supabaseClient';
 import { useTheme } from "@/hooks/use-theme";
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface NavigationProps {
   currentView?: string;
@@ -16,6 +17,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   const [theme, setTheme] = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
@@ -28,11 +30,13 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   }, []);
 
   const signIn = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) toast({ title: "Sign-in failed", description: error.message, variant: "destructive" });
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) toast({ title: "Sign-out failed", description: error.message, variant: "destructive" });
   };
 
   const navItems = [
@@ -42,16 +46,22 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
     { id: 'journal', label: 'Journal', icon: BookOpen, path: '/smartjournaling' },
     { id: 'mindfulness', label: 'Mindfulness', icon: Brain, path: '/mindfulnesstools' },
     { id: 'dashboard', label: 'Insights', icon: BarChart3, path: '/wellnessinsights' },
+    { id: 'community', label: 'Community', icon: Users, path: '/community' },
   ];
 
   const handleNavClick = (item: { id: string; label: string; icon: React.ComponentType; path: string }) => {
-    if (onViewChange) {
+    if (onViewChange && item.id !== 'community') {
       // Use custom view state if provided (for Index page)
       onViewChange(item.id);
     } else {
       // Use React Router navigation
       navigate(item.path);
     }
+  };
+
+  const handleGetStarted = () => {
+    if (onViewChange) onViewChange('chat');
+    else navigate('/aicompanion');
   };
 
   const isActive = (item: { id: string; path: string }) => {
@@ -63,18 +73,18 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
 
   return (
     <nav className="bg-white/90 dark:bg-gray-900 backdrop-blur-md border-b border-white/50 dark:border-gray-800 sticky top-0 z-50">
-      <div>
-        <div className="flex justify-between items-center h-16">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex h-16 min-w-0 items-center justify-between gap-2">
           {/* Logo */}
           <div className="flex items-center space-x-2 cursor-pointer flex-shrink-0" onClick={() => handleNavClick(navItems[0])}>
             <img src="/serenity-logo.png" alt="Serenity AI Logo" className="w-8 h-8" />
-            <span className="text-xl font-bold bg-gradient-to-r from-serenity-600 to-calm-600 bg-clip-text text-transparent">
+            <span className="whitespace-nowrap text-lg font-bold bg-gradient-to-r from-serenity-600 to-calm-600 bg-clip-text text-transparent sm:text-xl lg:hidden 2xl:inline">
               Serenity AI
             </span>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1 flex-1 min-w-0 overflow-hidden justify-center mx-2">
+          <div className="hidden lg:flex items-center gap-0.5 flex-1 min-w-0 justify-center mx-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -82,21 +92,21 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                   key={item.id}
                   variant={isActive(item) ? "default" : "ghost"}
                   onClick={() => handleNavClick(item)}
-                  className={`flex items-center space-x-2 transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-2 text-sm transition-all duration-200 xl:px-3 ${
                     isActive(item)
                       ? 'bg-serenity-500 text-white shadow-lg'
                       : 'hover:bg-serenity-50 text-serenity-700 dark:hover:bg-serenity-900 dark:text-serenity-100'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="truncate hidden xl:inline max-w-[110px]">{item.label}</span>
+                  <span className="hidden xl:inline">{item.label}</span>
                 </Button>
               );
             })}
           </div>
 
           {/* Dark Mode Toggle */}
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0 md:gap-2">
             <button
               aria-label="Toggle dark mode"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -139,13 +149,13 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                 </Button>
               </div>
             )}
-            <Button className="bg-gradient-to-r from-serenity-500 to-calm-500 hover:from-serenity-600 hover:to-calm-600 text-white shadow-lg">
+            <Button onClick={handleGetStarted} className="rounded-full bg-emerald-700 text-white shadow-sm hover:bg-emerald-800">
               Get Started
             </Button>
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="shrink-0 md:hidden">
             <Button
               variant="ghost"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -203,7 +213,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                   </Button>
                 </div>
               )}
-              <Button className="w-full bg-gradient-to-r from-serenity-500 to-calm-500 text-white">
+              <Button onClick={handleGetStarted} className="w-full bg-emerald-700 text-white hover:bg-emerald-800">
                 Get Started
               </Button>
             </div>

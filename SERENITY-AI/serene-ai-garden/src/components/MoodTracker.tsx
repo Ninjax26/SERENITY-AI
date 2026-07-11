@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,28 @@ const MoodTracker = () => {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
+  const fetchMoodEntries = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from('mood_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (!error && data) {
+      setMoodEntries(data.map((row: MoodEntryRow) => ({
+        id: row.id,
+        mood: row.mood,
+        emoji: row.emoji,
+        note: row.note,
+        date: new Date(row.created_at),
+        factors: row.factors || [],
+      })));
+    } else {
+      setMoodEntries([]);
+      if (error) toast({ title: "Mood history unavailable", description: error.message, variant: "destructive" });
+    }
+  }, [toast]);
+
   // Fetch user and mood entries from Supabase
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -48,28 +70,7 @@ const MoodTracker = () => {
     return () => {
       listener?.subscription.unsubscribe();
     };
-  }, []);
-
-  const fetchMoodEntries = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('mood_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (!error && data) {
-      setMoodEntries(data.map((row: MoodEntryRow) => ({
-        id: row.id,
-        mood: row.mood,
-        emoji: row.emoji,
-        note: row.note,
-        date: new Date(row.created_at),
-        factors: row.factors || [],
-      })));
-    } else {
-      setMoodEntries([]);
-    }
-  };
+  }, [fetchMoodEntries]);
 
   const moodOptions = [
     { value: 1, emoji: '😢', label: 'Very Sad', color: 'text-red-500' },
@@ -122,9 +123,11 @@ const MoodTracker = () => {
 
   const handleClearAll = async () => {
     if (!user) return;
+    if (!window.confirm('Delete every mood entry? This cannot be undone.')) return;
     const { error } = await supabase.from('mood_entries').delete().eq('user_id', user.id);
     if (!error) {
       setMoodEntries([]);
+      toast({ title: "Mood history cleared", description: "All mood entries were deleted." });
     } else {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }

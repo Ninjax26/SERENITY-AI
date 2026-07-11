@@ -8,21 +8,33 @@ const DashboardOverview = () => {
   const [journalEntries, setJournalEntries] = useState<{ word_count?: number }[]>([]);
   const [chatCount, setChatCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setError('Sign in to view your wellness insights.');
+        setLoading(false);
+        return;
+      }
 
       const [moodData, journalData, chatData] = await Promise.all([
-        supabase.from('mood_entries').select('*').eq('user_id', user.id).limit(200),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).limit(200),
-        supabase.from('chat_messages').select('*').eq('user_id', user.id).limit(200)
+        supabase.from('mood_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
+        supabase.from('chat_messages').select('id', { count: 'exact' }).eq('user_id', user.id).limit(200)
       ]);
+
+      const requestError = moodData.error || journalData.error || chatData.error;
+      if (requestError) {
+        setError('Some wellness data could not be loaded. Please try again.');
+        setLoading(false);
+        return;
+      }
 
       setMoodEntries(moodData.data || []);
       setJournalEntries(journalData.data || []);
-      setChatCount(chatData.data?.length || 0);
+      setChatCount(chatData.count ?? chatData.data?.length ?? 0);
       setLoading(false);
     };
 
@@ -38,6 +50,10 @@ const DashboardOverview = () => {
 
   if (loading) {
     return <div className="text-center py-12">Loading your wellness insights...</div>;
+  }
+
+  if (error) {
+    return <div className="mx-auto max-w-lg px-4 py-16 text-center text-muted-foreground">{error}</div>;
   }
 
   return (

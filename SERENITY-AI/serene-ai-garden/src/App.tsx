@@ -14,6 +14,7 @@ import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import CrisisResources from "./pages/CrisisResources";
+import PublicPageFrame from "./components/PublicPageFrame";
 
 const AICompanion = lazy(() => import("./pages/AICompanion"));
 const Community = lazy(() => import("./pages/Community"));
@@ -37,20 +38,20 @@ const App = () => (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/about" element={<About />} />
-          <Route path="/careers" element={<Careers />} />
-          <Route path="/press" element={<Press />} />
-          <Route path="/blog" element={<Blog />} />
+          <Route path="/about" element={<PublicPageFrame><About /></PublicPageFrame>} />
+          <Route path="/careers" element={<PublicPageFrame><Careers /></PublicPageFrame>} />
+          <Route path="/press" element={<PublicPageFrame><Press /></PublicPageFrame>} />
+          <Route path="/blog" element={<PublicPageFrame><Blog /></PublicPageFrame>} />
           <Route path="/community" element={<Community />} />
-          <Route path="/helpcenter" element={<HelpCenter />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/privacypolicy" element={<PrivacyPolicy />} />
+          <Route path="/helpcenter" element={<PublicPageFrame><HelpCenter /></PublicPageFrame>} />
+          <Route path="/contact" element={<PublicPageFrame><Contact /></PublicPageFrame>} />
+          <Route path="/privacypolicy" element={<PublicPageFrame><PrivacyPolicy /></PublicPageFrame>} />
           <Route path="/moodtracking" element={<MoodTracking />} />
           <Route path="/smartjournaling" element={<SmartJournaling />} />
           <Route path="/wellnessinsights" element={<WellnessInsights />} />
           <Route path="/mindfulnesstools" element={<MindfulnessTools />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/crisis-resources" element={<CrisisResources />} />
+          <Route path="/terms" element={<PublicPageFrame><Terms /></PublicPageFrame>} />
+          <Route path="/crisis-resources" element={<PublicPageFrame><CrisisResources /></PublicPageFrame>} />
           <Route path="/aicompanion" element={<AICompanion />} />
           <Route path="/" element={<Index />} />
           <Route path="*" element={<NotFound />} />

@@ -1,68 +1,21 @@
-import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Feather, Sparkles } from "lucide-react";
 
-const faqs = [
-  {
-    question: "What is Serenity AI?",
-    answer: "Serenity AI is your compassionate AI companion, designed to support your emotional well-being and mental health through conversation, journaling, and mindfulness tools."
-  },
-  {
-    question: "Is my data secure?",
-    answer: "Yes. Your data is encrypted and stored securely. Serenity AI is privacy-first and never shares your information without your consent."
-  },
-  {
-    question: "Can I talk to an AI companion?",
-    answer: "Absolutely! You can chat with our AI companion anytime for support, reflection, or just to talk."
-  },
-  {
-    question: "Do I need an account to journal?",
-    answer: "You can explore some features without an account, but creating one lets you save your journal entries and track your progress securely."
-  },
-  {
-    question: "How is my mood tracked?",
-    answer: "You can log your mood daily. Serenity AI helps you visualize trends and gain insights into your emotional journey."
-  }
+const notes = [
+  { title: "Why small check-ins matter", description: "A practical look at noticing emotions without turning every day into a self-improvement project.", icon: Sparkles, label: "Reflection" },
+  { title: "Designing a kinder AI companion", description: "The product questions behind tone, boundaries, and building support without pretending to replace care.", icon: Feather, label: "Behind the product" },
+  { title: "Journaling when you don’t know what to write", description: "Simple ways to begin with what is present, instead of waiting for the perfect insight.", icon: BookOpen, label: "Practice" },
 ];
 
-function FAQAccordion() {
-  const [openIndex, setOpenIndex] = React.useState<number | null>(null);
-  return (
-    <section aria-label="Frequently Asked Questions" className="max-w-3xl mx-auto my-12">
-      <h3 className="text-lg font-semibold text-serenity-700 mb-4 text-center">FAQs</h3>
-      <ul className="space-y-3">
-        {faqs.map((faq, idx) => (
-          <li key={faq.question} className="bg-serenity-50/70 dark:bg-white/10 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-serenity-300 transition"
-              aria-expanded={openIndex === idx}
-              aria-controls={`faq-panel-${idx}`}
-              onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
-            >
-              <span className="font-medium text-gray-800">{faq.question}</span>
-              <ChevronDown className={`w-5 h-5 ml-2 transition-transform ${openIndex === idx ? 'rotate-180' : ''}`} />
-            </button>
-            <div
-              id={`faq-panel-${idx}`}
-              role="region"
-              aria-hidden={openIndex !== idx}
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === idx ? 'max-h-40 py-2 px-4' : 'max-h-0 py-0 px-4'}`}
-            >
-              <p className="text-gray-600 text-sm leading-relaxed">{faq.answer}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 const Blog = () => (
-  <div className="max-w-3xl mx-auto py-12 px-4">
-    <h1 className="text-3xl font-bold mb-4">Blog</h1>
-    <p className="text-gray-700 mb-2">Read the latest articles and updates from Serenity AI.</p>
-    <p className="text-gray-600">This is a placeholder Blog page. Posts will appear here soon.</p>
-    <FAQAccordion />
+  <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+    <div className="grid gap-8 md:grid-cols-[1fr_.7fr] md:items-end">
+      <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Field notes</p><h1 className="mt-4 font-serif text-5xl font-bold tracking-tight sm:text-6xl">Ideas for a steadier inner life.</h1></div>
+      <p className="text-lg leading-8 text-slate-600 dark:text-slate-300">The Serenity journal is being prepared. These are the first topics on our desk, and published articles will appear here when they are ready.</p>
+    </div>
+    <div className="mt-12 grid gap-5 md:grid-cols-3">
+      {notes.map((note, index) => { const Icon = note.icon; return <article key={note.title} className="flex min-h-72 flex-col rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><Icon className="h-6 w-6 text-emerald-700 dark:text-emerald-300" /><span className="text-xs font-black text-slate-300">0{index + 1}</span></div><p className="mt-10 text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">{note.label}</p><h2 className="mt-2 font-serif text-2xl font-bold">{note.title}</h2><p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{note.description}</p><span className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-bold text-slate-400">Coming soon <ArrowUpRight className="h-4 w-4" /></span></article>; })}
+    </div>
   </div>
 );
 
-export default Blog; 
+export default Blog;

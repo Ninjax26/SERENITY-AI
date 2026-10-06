@@ -35,6 +35,16 @@ interface JournalEntryRow {
   word_count: number;
 }
 
+const toJournalEntry = (row: JournalEntryRow): JournalEntry => ({
+  id: row.id,
+  title: row.title,
+  content: row.content,
+  date: new Date(row.created_at),
+  sentiment: row.sentiment,
+  tags: row.tags || [],
+  wordCount: row.word_count
+});
+
 const JournalInterface = () => {
   const [currentEntry, setCurrentEntry] = useState('');
   const [currentTitle, setCurrentTitle] = useState('');
@@ -70,15 +80,7 @@ const JournalInterface = () => {
               return;
             }
             if (rows) {
-              setJournalEntries(rows.map((row: JournalEntryRow) => ({
-                id: row.id,
-                title: row.title,
-                content: row.content,
-                date: new Date(row.created_at),
-                sentiment: row.sentiment,
-                tags: row.tags || [],
-                wordCount: row.word_count
-              })));
+              setJournalEntries(rows.map(toJournalEntry));
             }
           });
       }
@@ -100,8 +102,7 @@ const JournalInterface = () => {
         ? 'negative'
         : 'neutral';
 
-      const newEntry: JournalEntry = {
-        id: Date.now().toString(),
+      const newEntry = {
         title: currentTitle || `Entry from ${new Date().toLocaleDateString()}`,
         content: currentEntry,
         date: new Date(),
@@ -110,7 +111,7 @@ const JournalInterface = () => {
         wordCount: currentEntry.trim().split(/\s+/).length
       };
 
-      const { error } = await supabase.from('journal_entries').insert({
+      const { data: savedEntry, error } = await supabase.from('journal_entries').insert({
         user_id: user.id,
         title: newEntry.title,
         content: newEntry.content,
@@ -118,11 +119,11 @@ const JournalInterface = () => {
         tags: newEntry.tags,
         word_count: newEntry.wordCount,
         created_at: newEntry.date.toISOString()
-      });
+      }).select('*').single();
 
       if (error) throw error;
 
-      setJournalEntries(prev => [newEntry, ...prev]);
+      setJournalEntries(prev => [toJournalEntry(savedEntry as JournalEntryRow), ...prev]);
       setCurrentEntry('');
       setCurrentTitle('');
       toast({ title: "Entry saved", description: "Your journal entry was added to your history." });
@@ -150,7 +151,6 @@ const JournalInterface = () => {
         complete: async (results) => {
           const text = (results.data as string[][]).map((row) => row.join(', ')).join('\n');
           const newEntry = {
-            id: Date.now().toString(),
             title: 'Imported CSV Entry',
             content: text,
             date: new Date(),
@@ -162,7 +162,7 @@ const JournalInterface = () => {
             toast({ title: "Empty file", description: "No journal text was found in that CSV.", variant: "destructive" });
             return;
           }
-          const { error } = await supabase.from('journal_entries').insert({
+          const { data: savedEntry, error } = await supabase.from('journal_entries').insert({
             user_id: user.id,
             title: newEntry.title,
             content: newEntry.content,
@@ -170,12 +170,12 @@ const JournalInterface = () => {
             tags: newEntry.tags,
             word_count: newEntry.wordCount,
             created_at: newEntry.date.toISOString()
-          });
+          }).select('*').single();
           if (error) {
             toast({ title: "Import not saved", description: error.message, variant: "destructive" });
             return;
           }
-          setJournalEntries(prev => [newEntry, ...prev]);
+          setJournalEntries(prev => [toJournalEntry(savedEntry as JournalEntryRow), ...prev]);
           toast({ title: "CSV imported", description: "The imported entry was saved." });
         },
         error: () => toast({ title: "Import failed", description: "Failed to parse CSV file.", variant: "destructive" })
@@ -194,7 +194,6 @@ const JournalInterface = () => {
           }
           if (!text.trim()) throw new Error('No readable text was found in this PDF.');
           const newEntry = {
-            id: Date.now().toString(),
           title: 'Imported PDF Entry',
           content: text,
           date: new Date(),
@@ -202,7 +201,7 @@ const JournalInterface = () => {
           tags: [],
             wordCount: text.trim().split(/\s+/).length
           };
-          const { error } = await supabase.from('journal_entries').insert({
+          const { data: savedEntry, error } = await supabase.from('journal_entries').insert({
           user_id: user.id,
           title: newEntry.title,
           content: newEntry.content,
@@ -210,9 +209,9 @@ const JournalInterface = () => {
           tags: newEntry.tags,
           word_count: newEntry.wordCount,
           created_at: newEntry.date.toISOString()
-          });
+          }).select('*').single();
           if (error) throw error;
-          setJournalEntries(prev => [newEntry, ...prev]);
+          setJournalEntries(prev => [toJournalEntry(savedEntry as JournalEntryRow), ...prev]);
           toast({ title: "PDF imported", description: "The imported entry was saved." });
         } catch (error) {
           toast({ title: "Import failed", description: error instanceof Error ? error.message : "The PDF could not be read.", variant: "destructive" });

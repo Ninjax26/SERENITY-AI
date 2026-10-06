@@ -21,6 +21,17 @@ interface Message {
   emotion?: string;
 }
 
+interface BrowserSpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -37,7 +48,7 @@ const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loginWarning, setLoginWarning] = useState<string | null>(null);
 
@@ -56,13 +67,13 @@ const ChatInterface = () => {
           .from('chat_messages')
           .select('*')
           .eq('user_id', data.user.id)
-          .order('created_at', { ascending: true })
+          .order('created_at', { ascending: false })
           .limit(100)
           .then(({ data: rows, error }) => {
             if (error) {
               setError('Failed to load chat messages.');
             } else if (rows?.length) {
-              setMessages(rows.map((row: { id: string; content: string; sender: 'user' | 'ai'; created_at: string; emotion?: string }) => ({
+              setMessages(rows.reverse().map((row: { id: string; content: string; sender: 'user' | 'ai'; created_at: string; emotion?: string }) => ({
                 id: row.id,
                 content: row.content,
                 sender: row.sender,
@@ -82,7 +93,8 @@ const ChatInterface = () => {
   // Voice recognition setup
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
-    const SpeechRecognition = (window as unknown as { SpeechRecognition: typeof SpeechRecognition; webkitSpeechRecognition: typeof SpeechRecognition }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognition; webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = false;
@@ -273,7 +285,7 @@ const ChatInterface = () => {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            text += content.items.map((item: { str: string }) => item.str).join(' ') + '\n';
+            text += content.items.map((item) => 'str' in item ? item.str : '').join(' ') + '\n';
           }
           await saveImportedMessage(text);
           toast({ title: "PDF imported", description: "The imported message was saved." });

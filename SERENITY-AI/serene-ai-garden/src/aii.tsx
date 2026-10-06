@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GoogleGenerativeAIFetchError, type GenerateContentRequest } from "@google/generative-ai";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string;
 
@@ -8,12 +8,23 @@ if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE' || apiKey === 'your_gemini_
 
 const ai = new GoogleGenerativeAI(apiKey);
 const MODEL_NAME = "gemini-3.5-flash";
+const FALLBACK_MODEL_NAME = "gemini-3.5-flash-lite";
+
+async function generateContent(request: GenerateContentRequest) {
+  try {
+    return await ai.getGenerativeModel({ model: MODEL_NAME }).generateContent(request);
+  } catch (error) {
+    if (!(error instanceof GoogleGenerativeAIFetchError) || error.status !== 503) {
+      throw error;
+    }
+    return ai.getGenerativeModel({ model: FALLBACK_MODEL_NAME }).generateContent(request);
+  }
+}
 
 // Helper to detect mood from a message using Gemini
 export async function detectMood(userMessage: string): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: MODEL_NAME });
-    const result = await model.generateContent({
+    const result = await generateContent({
       contents: [{ role: "user", parts: [{ text: `Analyze the following message and return only the user's mood as one word (e.g., happy, sad, anxious, excited, angry, neutral, etc.):\n${userMessage}` }] }],
       systemInstruction: "You are a mood detection assistant. Only return the mood word, nothing else."
     });
@@ -35,7 +46,6 @@ export async function getGeminiAIResponse({
   mood?: string
 }): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: MODEL_NAME });
     // Build context for Gemini
     const contents = [
       ...contextMessages.map(m => ({
@@ -55,7 +65,7 @@ export async function getGeminiAIResponse({
       }
     }
     systemInstruction += `Do not diagnose or prescribe. Instead, focus on active listening, motivational interviewing techniques, and therapeutic conversation. Use gentle, emotionally sensitive language. Tailor your tone based on the user's emotional state. Always make the user feel heard, safe, and supported.`;
-    const result = await model.generateContent({
+    const result = await generateContent({
       contents,
       systemInstruction
     });
@@ -69,8 +79,7 @@ export async function getGeminiAIResponse({
 // Daily affirmation generator
 export async function getDailyAffirmation(): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: MODEL_NAME });
-    const result = await model.generateContent({
+    const result = await generateContent({
       contents: [{ role: "user", parts: [{ text: "Give me a short, positive daily affirmation for emotional well-being." }] }],
       systemInstruction: "You are an affirmation generator. Respond with a single, uplifting affirmation sentence."
     });

@@ -24,9 +24,17 @@ const WellnessInsights = lazy(() => import("./pages/WellnessInsights"));
 const MindfulnessTools = lazy(() => import("./pages/MindfulnessTools"));
 const Index = lazy(() => import("./pages/Index"));
 
+// Page-shaped placeholder: stable layout that matches real pages without
+// implying progress details or shifting content when the route arrives.
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground">
-    Loading...
+  <div className="mx-auto w-full max-w-7xl animate-pulse px-4 py-10 sm:px-6" aria-hidden="true">
+    <div className="h-8 w-56 rounded-lg bg-slate-200 dark:bg-slate-800" />
+    <div className="mt-4 h-4 w-80 max-w-full rounded bg-slate-100 dark:bg-slate-800/60" />
+    <div className="mt-10 grid gap-6 sm:grid-cols-2">
+      <div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
+      <div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
+    </div>
+    <span className="sr-only" role="status">Loading…</span>
   </div>
 );
 

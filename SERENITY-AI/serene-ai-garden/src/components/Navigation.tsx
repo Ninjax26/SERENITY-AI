@@ -31,6 +31,10 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   }, []);
 
   const signIn = async () => {
+    // Remember where the person was so the OAuth redirect can bring them back.
+    if (currentView && currentView !== 'home') {
+      sessionStorage.setItem('serenity:returnView', currentView);
+    }
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
     if (error) toast({ title: "Sign-in failed", description: error.message, variant: "destructive" });
   };
@@ -107,6 +111,8 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
                   key={item.id}
                   variant={isActive(item) ? "default" : "ghost"}
                   onClick={() => handleNavClick(item)}
+                  aria-label={item.label}
+                  aria-current={isActive(item) ? 'page' : undefined}
                   className={`flex items-center gap-1.5 px-2 text-sm transition-all duration-200 xl:px-3 ${
                     isActive(item)
                       ? 'bg-serenity-500 text-white shadow-lg'
@@ -172,11 +178,13 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="shrink-0 md:hidden">
+          {/* Mobile menu button — visible below lg, where the full nav cannot fit */}
+          <div className="shrink-0 lg:hidden">
             <Button
               variant="ghost"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
@@ -185,7 +193,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-2 animate-fade-in">
+          <div className="lg:hidden py-4 space-y-2 animate-fade-in">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -208,6 +216,12 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
               );
             })}
             <div className="pt-4 space-y-2">
+              <a
+                href="/crisis-resources"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40"
+              >
+                <Heart className="h-4 w-4" /> Crisis resources
+              </a>
               {!user ? (
                 <Button variant="ghost" className="w-full" onClick={signIn}>Sign In</Button>
               ) : (

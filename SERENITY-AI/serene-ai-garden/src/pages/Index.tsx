@@ -13,12 +13,25 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('home');
 
   useEffect(() => {
+    // Deep-linkable home views (?chat, ?mood, ...) survive refreshes and the
+    // OAuth redirect back to "/", so a chosen destination is not lost.
     if (window.location.search.includes('chat')) {
       setCurrentView('chat');
     } else if (window.location.search.includes('smartjournaling')) {
       setCurrentView('journal');
     } else if (window.location.search.includes('wellnessinsights')) {
       setCurrentView('dashboard');
+    } else if (window.location.search.includes('mood')) {
+      setCurrentView('mood');
+    } else if (window.location.search.includes('mindfulness')) {
+      setCurrentView('mindfulness');
+    } else {
+      // A view chosen before signing in resumes after the OAuth redirect.
+      const returnView = sessionStorage.getItem('serenity:returnView');
+      if (returnView) {
+        sessionStorage.removeItem('serenity:returnView');
+        setCurrentView(returnView);
+      }
     }
   }, []);
 
@@ -37,7 +50,10 @@ const Index = () => {
       default:
         return (
           <>
-            <HeroSection onGetStarted={() => setCurrentView('chat')} />
+            <HeroSection
+              onCheckIn={() => setCurrentView('mood')}
+              onBreathingExercise={() => setCurrentView('mindfulness')}
+            />
             <FeatureShowcase onFeatureClick={setCurrentView} />
           </>
         );

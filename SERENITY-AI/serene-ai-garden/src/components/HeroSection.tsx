@@ -1,11 +1,12 @@
-import { ArrowRight, BookOpen, Heart, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Heart, MessageCircle, ShieldCheck, Sparkles, Wind } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeroSectionProps {
-  onGetStarted: () => void;
+  onCheckIn: () => void;
+  onBreathingExercise: () => void;
 }
 
-const HeroSection = ({ onGetStarted }: HeroSectionProps) => (
+const HeroSection = ({ onCheckIn, onBreathingExercise }: HeroSectionProps) => (
   <section className="relative overflow-hidden border-b border-emerald-950/10 bg-[#f5f8f3] dark:border-white/10 dark:bg-slate-950">
     <div className="editorial-grid absolute inset-0 opacity-35 [mask-image:linear-gradient(to_bottom,black,transparent_82%)]" />
     <div className="absolute -right-24 top-16 h-80 w-80 rounded-full bg-[#c6e8db] blur-3xl dark:bg-emerald-900/30" />
@@ -23,16 +24,17 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => (
           Talk things through, notice emotional patterns, and build mindful routines with one calm digital companion.
         </p>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <Button onClick={onGetStarted} size="lg" className="group h-13 rounded-full bg-[#176b57] px-7 text-base text-white shadow-lg shadow-emerald-900/10 hover:bg-[#125444]">
-            Talk to Serenity <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          <Button onClick={onCheckIn} size="lg" className="group h-13 rounded-full bg-[#176b57] px-7 text-base text-white shadow-lg shadow-emerald-900/10 hover:bg-[#125444]">
+            Check in with yourself <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
-          <a href="/crisis-resources" className="inline-flex h-13 items-center justify-center rounded-full border border-slate-300 bg-white/70 px-7 text-sm font-bold text-slate-700 transition hover:border-emerald-600 hover:text-emerald-800 dark:border-slate-700 dark:bg-white/5 dark:text-slate-200">
-            Find immediate support
-          </a>
+          <Button onClick={onBreathingExercise} size="lg" variant="ghost" className="h-13 rounded-full border border-slate-300 bg-white/70 px-7 text-sm font-bold text-slate-700 hover:border-emerald-600 hover:bg-white hover:text-emerald-800 dark:border-slate-700 dark:bg-white/5 dark:text-slate-200">
+            <Wind className="mr-2 h-4 w-4" /> Try a breathing exercise
+          </Button>
         </div>
         <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
           <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Your entries stay with your account</span>
           <span className="inline-flex items-center gap-2"><Heart className="h-4 w-4 text-rose-500" /> Built for reflection, not diagnosis</span>
+          <a href="/crisis-resources" className="inline-flex items-center gap-2 font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-300"><MessageCircle className="h-4 w-4" /> Find immediate support</a>
         </div>
       </div>
 

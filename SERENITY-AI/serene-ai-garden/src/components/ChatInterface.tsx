@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Send, Heart, Sparkles, MessageCircle, Mic, MicOff, Volume2, Download, Upload, Bot } from 'lucide-react';
-import { getGeminiAIResponse, detectMood } from "../aii";
+import { getGeminiAIResponse } from "../aii";
+import { classifyMood } from "@/lib/moodClassifier";
 import Papa from 'papaparse';
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '../supabaseClient';
@@ -44,6 +46,10 @@ const ChatInterface = () => {
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  // True from submit until the turn finishes, so the insert wait cannot be
+  // double-submitted; the ref closes the gap before the state re-renders.
+  const [isSending, setIsSending] = useState(false);
+  const sendInFlight = useRef(false);
   const [user, setUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isListening, setIsListening] = useState(false);
@@ -52,6 +58,13 @@ const ChatInterface = () => {
   const [error, setError] = useState<string | null>(null);
   const [loginWarning, setLoginWarning] = useState<string | null>(null);
   const [crisisNotice, setCrisisNotice] = useState(false);
+  // A turn whose reply failed: the user's message is already saved, so a
+  // retry regenerates only the reply instead of duplicating the message.
+  const [retryTurn, setRetryTurn] = useState<{
+    content: string;
+    contextMessages: { role: 'user' | 'ai'; content: string }[];
+    mood: string;
+  } | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,61 +122,30 @@ const ChatInterface = () => {
     recognitionRef.current.onend = () => setIsListening(false);
   }, []);
 
-  const handleSendMessage = async () => {
-    setError(null);
-    if (!newMessage.trim()) return;
-    if (!user) {
-      setLoginWarning('You must be signed in to chat with the AI Companion. Please sign in.');
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
+  const requestReply = async (turn: {
+    content: string;
+    contextMessages: { role: 'user' | 'ai'; content: string }[];
+    mood: string;
+  }) => {
+    if (!user) return;
     setIsTyping(true);
-
+    setError(null);
     try {
-      // Save the user message first so the persisted thread stays consistent.
-      const { error: insertError } = await supabase.from('chat_messages').insert({
-        user_id: user.id,
-        content: userMessage.content,
-        sender: userMessage.sender,
-        created_at: userMessage.timestamp.toISOString(),
-        emotion: userMessage.emotion || null
-      });
-      if (insertError) throw insertError;
-
-      // The current message is appended inside getGeminiAIResponse, so only send prior context here.
-      const contextMessages = messages.slice(-6).map(m => ({
-        role: m.sender,
-        content: m.content
-      }));
-      let mood = 'neutral';
-      try {
-        mood = await detectMood(userMessage.content);
-      } catch {
-        // Mood classification enhances the prompt but must not block the main reply.
-      }
       const aiResult = await getGeminiAIResponse({
-        userMessage: userMessage.content,
-        contextMessages,
-        mood
+        userMessage: turn.content,
+        contextMessages: turn.contextMessages,
+        mood: turn.mood,
       });
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: aiResult.text,
         sender: 'ai',
         timestamp: new Date(),
-        emotion: mood || 'supportive'
+        emotion: turn.mood || 'supportive'
       };
       setMessages(prev => [...prev, aiMessage]);
       if (aiResult.crisis) setCrisisNotice(true);
+      setRetryTurn(null);
 
       // A persistence failure should not discard a response the user already received.
       const { error: aiInsertError } = await supabase.from('chat_messages').insert({
@@ -177,17 +159,71 @@ const ChatInterface = () => {
         toast({ title: "Reply not saved", description: "The response is visible, but could not be added to your history.", variant: "destructive" });
       }
     } catch (err) {
-      console.error('Gemini API error:', err);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        content: 'Sorry, I had trouble connecting to the AI service.',
-        sender: 'ai',
-        timestamp: new Date(),
-        emotion: 'supportive'
-      }]);
+      // Keep normal failures out of the assistant thread: offer a retry that
+      // does not re-send or re-persist the user's message.
+      console.error('AI request failed:', err);
+      setRetryTurn(turn);
+      setError('The reply could not be generated. Your message is saved — you can retry.');
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSendMessage = async () => {
+    setError(null);
+    if (!newMessage.trim()) return;
+    if (!user) {
+      setLoginWarning('You must be signed in to chat with the AI Companion. Please sign in.');
+      return;
+    }
+    if (sendInFlight.current || isTyping) return;
+    sendInFlight.current = true;
+    setIsSending(true);
+    try {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: newMessage,
+        sender: 'user',
+        timestamp: new Date(),
+        emotion: classifyMood(newMessage)
+      };
+
+      // Persist the user message before showing it; a failed save restores the
+      // draft instead of dropping it or leaving a phantom message in the thread.
+      const { error: insertError } = await supabase.from('chat_messages').insert({
+        user_id: user.id,
+        content: userMessage.content,
+        sender: userMessage.sender,
+        created_at: userMessage.timestamp.toISOString(),
+        emotion: userMessage.emotion || null
+      });
+      if (insertError) {
+        console.error('Message could not be saved:', insertError);
+        setError('Your message could not be saved. It is still in the box below — please try again.');
+        return;
+      }
+
+      setMessages(prev => [...prev, userMessage]);
+      setNewMessage('');
+
+      // The current message is appended inside getGeminiAIResponse, so only send prior context here.
+      await requestReply({
+        content: userMessage.content,
+        contextMessages: messages.slice(-6).map(m => ({
+          role: m.sender,
+          content: m.content
+        })),
+        mood: userMessage.emotion || 'neutral',
+      });
+    } finally {
+      sendInFlight.current = false;
+      setIsSending(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!retryTurn) return;
+    await requestReply(retryTurn);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -363,13 +399,21 @@ const ChatInterface = () => {
           </div>
         )}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-800 border border-red-300 rounded">
-            {error}
+          <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded border border-red-300 bg-red-100 p-3 text-sm text-red-800">
+            <span className="min-w-0 flex-1">{error}</span>
+            {retryTurn && (
+              <Button size="sm" variant="outline" onClick={handleRetry} disabled={isTyping}>
+                Retry
+              </Button>
+            )}
           </div>
         )}
         {crisisNotice && (
           <div role="alert" className="mb-4 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-950 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">
-            <strong>Immediate support matters.</strong> Serenity is not an emergency service. If you may be in danger, contact local emergency services or go to the nearest emergency department, and ask someone you trust to stay with you.
+            <strong>Immediate support matters.</strong> Serenity is not an emergency service. If you may be in danger, contact local emergency services or go to the nearest emergency department, and ask someone you trust to stay with you.{" "}
+            <Link to="/crisis-resources" className="font-semibold underline">
+              View crisis resources
+            </Link>
           </div>
         )}
         {/* Export Buttons */}
@@ -453,7 +497,10 @@ const ChatInterface = () => {
             {/* Input Area */}
             <div className="border-t border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-6">
               <p className="mb-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                Messages are saved to your private account and sent to an AI provider to generate replies. Serenity is not for emergencies or medical advice.
+                Messages are saved to your private account and sent to an AI provider to generate replies. Serenity is not for emergencies or medical advice.{" "}
+                <Link to="/crisis-resources" className="font-semibold text-emerald-700 underline hover:text-emerald-800 dark:text-emerald-300">
+                  Need immediate support?
+                </Link>
               </p>
               {/* Voice Chat Section */}
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -493,7 +540,7 @@ const ChatInterface = () => {
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || isTyping}
+                  disabled={!newMessage.trim() || isTyping || isSending}
                   className="h-10 w-10 shrink-0 rounded-xl bg-emerald-700 p-0 text-white hover:bg-emerald-800"
                 >
                   <Send className="w-4 h-4" />

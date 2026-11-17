@@ -75,6 +75,28 @@ function readRateLimit(): number {
   return Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 1_000) : DEFAULT_RATE_LIMIT_PER_MINUTE;
 }
 
+/**
+ * Primary model with a single Flash -> Flash-Lite fallback on upstream 503.
+ * Exported separately so tests can exercise the fallback chain with a stub.
+ */
+export async function generateWithFallback(
+  ai: GoogleGenerativeAI,
+  request: GenerateContentRequest,
+  ctx?: { onFallback?: () => void }
+): Promise<string> {
+  try {
+    const primary = ai.getGenerativeModel({ model: PRIMARY_MODEL }, { timeout: UPSTREAM_TIMEOUT_MS });
+    const result = await primary.generateContent(request);
+    return result.response.text();
+  } catch (error) {
+    if (!(error instanceof GoogleGenerativeAIFetchError) || error.status !== 503) throw error;
+    ctx?.onFallback?.();
+    const fallback = ai.getGenerativeModel({ model: FALLBACK_MODEL }, { timeout: UPSTREAM_TIMEOUT_MS });
+    const result = await fallback.generateContent(request);
+    return result.response.text();
+  }
+}
+
 export function createDeps(): AIDeps {
   const supabaseUrl = process.env.VITE_SUPABASE_URL!;
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY!;
@@ -112,17 +134,7 @@ export function createDeps(): AIDeps {
     },
 
     async generate(request, ctx) {
-      try {
-        const primary = ai.getGenerativeModel({ model: PRIMARY_MODEL }, { timeout: UPSTREAM_TIMEOUT_MS });
-        const result = await primary.generateContent(request);
-        return result.response.text();
-      } catch (error) {
-        if (!(error instanceof GoogleGenerativeAIFetchError) || error.status !== 503) throw error;
-        ctx?.onFallback?.();
-        const fallback = ai.getGenerativeModel({ model: FALLBACK_MODEL }, { timeout: UPSTREAM_TIMEOUT_MS });
-        const result = await fallback.generateContent(request);
-        return result.response.text();
-      }
+      return generateWithFallback(ai, request, ctx);
     },
   };
 }
@@ -188,7 +200,7 @@ export async function handleAIRequest(request: Request, deps: AIDeps): Promise<R
   }
 
   const quota = await deps.consumeQuota(userId, token);
-  if (!quota.ok) {
+  if (quota.ok === false) {
     if (quota.reason === "quota") {
       return respond(
         "rate-limited",

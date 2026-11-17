@@ -55,7 +55,10 @@ create table if not exists private.model_quota_hits (
 );
 create index if not exists model_quota_hits_user_idx on private.model_quota_hits (user_id, hit_at);
 
-create or replace function private.consume_model_quota(
+-- The function lives in the public schema because PostgREST (and therefore
+-- supabase.rpc) only exposes public by default; the hits table stays private
+-- and ungranted, reachable only through this security-definer function.
+create or replace function public.consume_model_quota(
   p_limit integer,
   p_window_seconds integer
 )
@@ -83,9 +86,9 @@ begin
   return true;
 end;
 $$;
-revoke all on function private.consume_model_quota(integer, integer) from public, anon;
-grant usage on schema private to authenticated;
-grant execute on function private.consume_model_quota(integer, integer) to authenticated;
+revoke all on function public.consume_model_quota(integer, integer) from public, anon;
+revoke usage on schema private from anon, authenticated;
+grant execute on function public.consume_model_quota(integer, integer) to authenticated;
 
 create or replace function private.update_post_vote_count()
 returns trigger

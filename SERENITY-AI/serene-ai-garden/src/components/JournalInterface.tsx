@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag, Trash2, Download, Upload, Feather } from 'lucide-react';
+import { BookOpen, Sparkles, Heart, Lightbulb, Calendar, Tag, Trash2, Download, Upload, Feather, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import type { User, PdfTextItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +51,7 @@ const JournalInterface = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const writingPrompts = [
@@ -88,12 +89,13 @@ const JournalInterface = () => {
   }, [toast]);
 
   const handleSaveEntry = async () => {
-    if (!currentEntry.trim()) return;
+    if (!currentEntry.trim() || saving) return;
     if (!user) {
       toast({ title: "Sign in required", description: "Sign in before saving a journal entry.", variant: "destructive" });
       return;
     }
 
+    setSaving(true);
     try {
       // Simulate sentiment analysis
       const sentiment = currentEntry.toLowerCase().includes('happy') || currentEntry.toLowerCase().includes('grateful') || currentEntry.toLowerCase().includes('joy')
@@ -128,8 +130,11 @@ const JournalInterface = () => {
       setCurrentTitle('');
       toast({ title: "Entry saved", description: "Your journal entry was added to your history." });
     } catch (err) {
+      // The draft stays in the editor so nothing the person wrote is lost.
       console.error("Failed to save journal entry:", err);
-      toast({ title: "Entry not saved", description: "Please try again in a moment.", variant: "destructive" });
+      toast({ title: "Entry not saved", description: "Your writing is still in the editor — please try again.", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -225,10 +230,13 @@ const JournalInterface = () => {
   };
 
   const currentStreak = (() => {
-    const days = new Set(journalEntries.map((entry) => entry.date.toISOString().slice(0, 10)));
+    // Local calendar days, not UTC — otherwise the streak breaks at midnight
+    // in any time zone ahead of UTC.
+    const localDay = (date: Date) => date.toLocaleDateString('en-CA');
+    const days = new Set(journalEntries.map((entry) => localDay(entry.date)));
     let streak = 0;
     const cursor = new Date();
-    while (days.has(cursor.toISOString().slice(0, 10))) {
+    while (days.has(localDay(cursor))) {
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     }
@@ -352,8 +360,9 @@ const JournalInterface = () => {
                     </div>
                     {/* Title Input */}
                     <div>
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Entry Title (Optional)</label>
+                      <label htmlFor="journal-title" className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Entry Title (Optional)</label>
                       <input
+                        id="journal-title"
                         type="text"
                         value={currentTitle}
                         onChange={(e) => setCurrentTitle(e.target.value)}
@@ -364,8 +373,9 @@ const JournalInterface = () => {
                     </div>
                     {/* Writing Area */}
                     <div>
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Your Thoughts</label>
+                      <label htmlFor="journal-content" className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2 block">Your Thoughts</label>
                       <Textarea
+                        id="journal-content"
                         value={currentEntry}
                         onChange={(e) => setCurrentEntry(e.target.value)}
                         maxLength={10000}
@@ -379,10 +389,11 @@ const JournalInterface = () => {
                       <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, (currentEntry.split(' ').filter(word => word.length > 0).length / 250) * 100)}%` }} /></div>
                       <Button
                         onClick={handleSaveEntry}
-                        disabled={!currentEntry.trim()}
+                        disabled={!currentEntry.trim() || saving}
                         className="rounded-full bg-amber-800 px-6 text-white hover:bg-amber-900"
                       >
-                        Save Entry
+                        {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {saving ? "Saving…" : "Save Entry"}
                       </Button>
                       <label className="ml-2 inline-flex cursor-pointer items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                         <Upload className="mr-2 h-3.5 w-3.5" />Import

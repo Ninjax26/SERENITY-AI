@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, CalendarDays, Check, Heart, Loader2, Sparkles, Trash2, TrendingUp } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +107,24 @@ const MoodTracker = () => {
   }, [moodEntries]);
   const selected = moodOptions.find((mood) => mood.value === selectedMood);
 
+  // Roving-tabindex radio group: arrows move, Space/Enter select, so keyboard
+  // and screen-reader users get single-choice semantics.
+  const moodGroupRef = useRef<HTMLDivElement>(null);
+  const onMoodGroupKeyDown = (event: React.KeyboardEvent) => {
+    const currentIndex = moodOptions.findIndex((mood) => mood.value === selectedMood);
+    let nextIndex: number;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % moodOptions.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = currentIndex < 0 ? moodOptions.length - 1 : (currentIndex - 1 + moodOptions.length) % moodOptions.length;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    setSelectedMood(moodOptions[nextIndex].value);
+    moodGroupRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]?.focus();
+  };
+
   return (
     <main className="min-h-screen bg-[#f3f7f4] pb-16 text-slate-900 dark:bg-slate-950 dark:text-white">
       <section className="relative overflow-hidden bg-[#173f36] text-white">
@@ -125,16 +143,37 @@ const MoodTracker = () => {
         <section className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Right now</p><h2 className="mt-1 font-serif text-2xl font-bold">How does today feel?</h2></div><Heart className="h-6 w-6 text-rose-400" /></div>
 
-          <div className="mt-6 grid grid-cols-5 gap-2">
-            {moodOptions.map((mood) => {
+          <div
+            ref={moodGroupRef}
+            role="radiogroup"
+            aria-label="How does today feel?"
+            onKeyDown={onMoodGroupKeyDown}
+            className="mt-6 grid grid-cols-5 gap-2"
+          >
+            {moodOptions.map((mood, index) => {
               const active = selectedMood === mood.value;
-              return <button key={mood.value} type="button" onClick={() => setSelectedMood(mood.value)} aria-label={mood.label} className={`group rounded-2xl border px-1 py-3 text-center transition duration-200 sm:px-2 ${active ? "-translate-y-1 border-transparent text-white shadow-lg" : "border-slate-200 bg-slate-50 hover:-translate-y-0.5 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-800"}`} style={active ? { backgroundColor: mood.color } : undefined}><span className="block text-2xl transition group-hover:scale-110 sm:text-3xl">{mood.emoji}</span><span className="mt-1 block truncate text-[10px] font-bold sm:text-xs">{mood.label}</span></button>;
+              return (
+                <button
+                  key={mood.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={mood.label}
+                  tabIndex={selectedMood === null ? (index === 0 ? 0 : -1) : active ? 0 : -1}
+                  onClick={() => setSelectedMood(mood.value)}
+                  className={`group rounded-2xl border px-1 py-3 text-center transition duration-200 sm:px-2 ${active ? "-translate-y-1 border-transparent text-white shadow-lg" : "border-slate-200 bg-slate-50 hover:-translate-y-0.5 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-800"}`}
+                  style={active ? { backgroundColor: mood.color } : undefined}
+                >
+                  <span className="block text-2xl transition group-hover:scale-110 sm:text-3xl" aria-hidden="true">{mood.emoji}</span>
+                  <span className="mt-1 block truncate text-[10px] font-bold sm:text-xs">{mood.label}</span>
+                </button>
+              );
             })}
           </div>
 
           <div className={`mt-5 overflow-hidden rounded-2xl transition-all ${selected ? "max-h-24 border border-emerald-100 bg-emerald-50 p-4 opacity-100 dark:border-emerald-900 dark:bg-emerald-950/40" : "max-h-0 opacity-0"}`}><p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">{selected?.prompt}</p><p className="mt-1 text-xs text-emerald-700/70 dark:text-emerald-300/60">What seems to be influencing this feeling?</p></div>
 
-          <div className="mt-6"><p className="text-sm font-bold">What shaped today?</p><div className="mt-3 grid grid-cols-4 gap-2">{factors.map(([factor, symbol]) => { const active = selectedFactors.includes(factor); return <button key={factor} type="button" onClick={() => toggleFactor(factor)} className={`relative rounded-xl border px-2 py-3 text-xs font-semibold transition ${active ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" : "border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700"}`}><span className="mb-1 block text-base">{symbol}</span>{factor}{active && <Check className="absolute right-1.5 top-1.5 h-3 w-3" />}</button>; })}</div></div>
+          <div className="mt-6"><p className="text-sm font-bold" id="mood-factors-label">What shaped today?</p><div role="group" aria-labelledby="mood-factors-label" className="mt-3 grid grid-cols-4 gap-2">{factors.map(([factor, symbol]) => { const active = selectedFactors.includes(factor); return <button key={factor} type="button" aria-pressed={active} onClick={() => toggleFactor(factor)} className={`relative rounded-xl border px-2 py-3 text-xs font-semibold transition ${active ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" : "border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700"}`}><span className="mb-1 block text-base" aria-hidden="true">{symbol}</span>{factor}{active && <Check className="absolute right-1.5 top-1.5 h-3 w-3" />}</button>; })}</div></div>
 
           <div className="mt-6"><div className="flex items-center justify-between"><label htmlFor="mood-note" className="text-sm font-bold">One line about today</label><span className="text-xs text-muted-foreground">{moodNote.length}/280</span></div><Textarea id="mood-note" value={moodNote} onChange={(event) => setMoodNote(event.target.value)} maxLength={280} placeholder="What happened, or what do you need?" className="mt-3 min-h-28 resize-none" /></div>
           {!user && !loading && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Sign in from the header to save check-ins across devices.</p>}

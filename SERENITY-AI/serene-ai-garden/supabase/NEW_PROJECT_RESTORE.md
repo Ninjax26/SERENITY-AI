@@ -61,8 +61,10 @@ Then in the new Supabase project:
 
 The explicit crisis-response path is a safeguard, not a clinical risk detector.
 It does not replace professional help, moderation, or comprehensive safety testing.
-For local AI testing, run the app through `vercel dev` with `GEMINI_API_KEY`
-configured; plain `vite` serves the frontend but not the `/api/ai` function.
+For local AI testing, run the function harness with `node --experimental-strip-types
+scripts/ai-dev-server.mjs` alongside `npm run dev` (Vite proxies `/api` to it);
+`GEMINI_API_KEY` must be set in `.env`. Plain `vite` alone serves the frontend
+but not the `/api/ai` function.
 
 ## App tables restored from the backup
 

@@ -8,6 +8,15 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Development only: forward /api to the local serverless harness
+    // (node --experimental-strip-types scripts/ai-dev-server.mjs).
+    // In production Vercel serves /api/ai natively.
+    proxy: {
+      "/api": {
+        target: "http://localhost:8787",
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     react(),

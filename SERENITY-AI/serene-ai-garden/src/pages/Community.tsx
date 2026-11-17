@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import type { PostVoteRow, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface Post {
   id: string;
@@ -29,6 +29,7 @@ interface Post {
   author: string;
   created_at: string;
   updated_at: string;
+  vote_count: number;
 }
 
 type SortMode = "hot" | "new";
@@ -82,9 +83,14 @@ const CommunityForum = () => {
       if (postsError) throw postsError;
       const nextPosts = (postsData || []) as Post[];
       setPosts(nextPosts);
+      setPostVotes(Object.fromEntries(nextPosts.map((post) => [post.id, post.vote_count || 0])));
 
       if (!nextPosts.length) {
-        setPostVotes({});
+        setUserVoted({});
+        return;
+      }
+
+      if (!currentUserId) {
         setUserVoted({});
         return;
       }
@@ -92,23 +98,20 @@ const CommunityForum = () => {
       const postIds = nextPosts.map((post) => post.id);
       const { data: votes, error: votesError } = await supabase
         .from("post_votes")
-        .select("post_id, user_id")
+        .select("post_id")
+        .eq("user_id", currentUserId)
         .in("post_id", postIds);
 
       if (votesError) {
         console.error("Posts loaded, but votes could not be loaded", votesError);
-        setPostVotes({});
         setUserVoted({});
         return;
       }
 
-      const voteCounts: Record<string, number> = {};
       const voted: Record<string, boolean> = {};
-      (votes as PostVoteRow[] | null)?.forEach((vote) => {
-        voteCounts[vote.post_id] = (voteCounts[vote.post_id] || 0) + 1;
-        if (currentUserId && vote.user_id === currentUserId) voted[vote.post_id] = true;
+      (votes as { post_id: string }[] | null)?.forEach((vote) => {
+        voted[vote.post_id] = true;
       });
-      setPostVotes(voteCounts);
       setUserVoted(voted);
     } catch (fetchError) {
       console.error("Failed to load community posts", fetchError);
@@ -386,7 +389,7 @@ const CommunityForum = () => {
                             onClick={() => handleVote(post.id)}
                             disabled={votingPostId === post.id}
                             aria-label={voted ? "Remove upvote" : "Upvote post"}
-                            className={`rounded-md p-1.5 transition ${voted ? "bg-orange-100 text-orange-600 dark:bg-orange-950" : "text-slate-400 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-950/40"}`}
+                            className={`rounded-md p-1.5 transition ${voted ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" : "text-emerald-900 hover:bg-orange-50 hover:text-orange-700 dark:text-emerald-200 dark:hover:bg-orange-950/40"}`}
                           >
                             <ArrowUp className="h-5 w-5" strokeWidth={voted ? 3 : 2} />
                           </button>

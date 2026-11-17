@@ -1,16 +1,13 @@
-const requiredEnvVars = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
-  'VITE_GEMINI_API_KEY',
-] as const;
+const publicEnvVars = {
+  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+};
 
 const placeholders = [
   'YOUR_SUPABASE_URL_HERE',
   'YOUR_SUPABASE_ANON_KEY_HERE',
-  'YOUR_GEMINI_API_KEY_HERE',
   'your_supabase_project_url',
   'your_supabase_anon_key',
-  'your_gemini_api_key',
 ];
 
 function isPlaceholder(value: string): boolean {
@@ -20,8 +17,7 @@ function isPlaceholder(value: string): boolean {
 export function validateEnv(): string[] {
   const missing: string[] = [];
 
-  for (const key of requiredEnvVars) {
-    const value = import.meta.env[key];
+  for (const [key, value] of Object.entries(publicEnvVars)) {
     if (!value || isPlaceholder(value)) {
       missing.push(key);
     }

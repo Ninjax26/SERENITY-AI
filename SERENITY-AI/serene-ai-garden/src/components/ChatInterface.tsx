@@ -51,6 +51,7 @@ const ChatInterface = () => {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loginWarning, setLoginWarning] = useState<string | null>(null);
+  const [crisisNotice, setCrisisNotice] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -149,19 +150,20 @@ const ChatInterface = () => {
       } catch {
         // Mood classification enhances the prompt but must not block the main reply.
       }
-      const aiText = await getGeminiAIResponse({
+      const aiResult = await getGeminiAIResponse({
         userMessage: userMessage.content,
         contextMessages,
         mood
       });
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: aiText,
+        content: aiResult.text,
         sender: 'ai',
         timestamp: new Date(),
         emotion: mood || 'supportive'
       };
       setMessages(prev => [...prev, aiMessage]);
+      if (aiResult.crisis) setCrisisNotice(true);
 
       // A persistence failure should not discard a response the user already received.
       const { error: aiInsertError } = await supabase.from('chat_messages').insert({
@@ -365,6 +367,11 @@ const ChatInterface = () => {
             {error}
           </div>
         )}
+        {crisisNotice && (
+          <div role="alert" className="mb-4 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-950 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">
+            <strong>Immediate support matters.</strong> Serenity is not an emergency service. If you may be in danger, contact local emergency services or go to the nearest emergency department, and ask someone you trust to stay with you.
+          </div>
+        )}
         {/* Export Buttons */}
         <div className="mb-3 flex flex-wrap justify-end gap-2">
           <Button variant="outline" size="sm" className="rounded-full bg-white dark:bg-slate-900" onClick={exportChatAsCSV}><Download className="mr-2 h-3.5 w-3.5" />CSV</Button>
@@ -445,6 +452,9 @@ const ChatInterface = () => {
 
             {/* Input Area */}
             <div className="border-t border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-6">
+              <p className="mb-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                Messages are saved to your private account and sent to an AI provider to generate replies. Serenity is not for emergencies or medical advice.
+              </p>
               {/* Voice Chat Section */}
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Button
